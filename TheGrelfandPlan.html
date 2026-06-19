@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grelfand Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pantry-green:#2F3B2E;
+    --pantry-green-dim:#3C4A3A;
+    --flour:#FAF6EE;
+    --flour-dim:#F1EADA;
+    --paprika:#C1572B;
+    --paprika-dim:#a8481f;
+    --butter:#E8B94B;
+    --ink:#262321;
+    --ink-soft:#5b554c;
+    --line:#dfd6c2;
+    --card-shadow: 0 1px 0 rgba(38,35,33,0.06), 0 8px 20px -10px rgba(38,35,33,0.18);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    background:var(--flour);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(38,35,33,0.05) 1px, transparent 0);
+    background-size: 18px 18px;
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:80px;
+  }
+
+  .wrap{
+    max-width:880px;
+    margin:0 auto;
+    padding:28px 20px 0;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  header .title-block .eyebrow{
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--paprika);
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  header h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(28px,5vw,40px);
+    margin:0;
+    line-height:1.05;
+    letter-spacing:-0.01em;
+  }
+  header h1 em{
+    font-style:italic;
+    font-weight:500;
+    color:var(--pantry-green);
+  }
+
+  .shop-btn{
+    background:var(--pantry-green);
+    color:var(--flour);
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    padding:13px 20px;
+    border-radius:999px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    box-shadow:var(--card-shadow);
+    transition:transform .15s ease, background .15s ease;
+    white-space:nowrap;
+  }
+  .shop-btn:hover{ background:var(--pantry-green-dim); transform:translateY(-1px); }
+  .shop-btn .count{
+    background:var(--butter);
+    color:var(--ink);
+    font-size:12px;
+    font-weight:700;
+    border-radius:999px;
+    padding:2px 8px;
+    min-width:20px;
+    text-align:center;
+  }
+
+  /* ---------- WEEK TABS ---------- */
+  .week-tabs{
+    display:flex;
+    gap:6px;
+    border-bottom:2px solid var(--line);
+    margin-bottom:26px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .week-tabs::-webkit-scrollbar{display:none;}
+  .week-tab{
+    font-family:'Fraunces', serif;
+    font-size:16px;
+    font-weight:500;
+    background:none;
+    border:none;
+    padding:10px 16px 12px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    position:relative;
+    white-space:nowrap;
+    border-radius:8px 8px 0 0;
+  }
+  .week-tab .wk-theme{
+    display:block;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:600;
+    color:var(--ink-soft);
+    opacity:.55;
+    margin-top:1px;
+  }
+  .week-tab.active{ color:var(--ink); }
+  .week-tab.active .wk-theme{ color:var(--paprika); opacity:1; }
+  .week-tab.active::after{
+    content:'';
+    position:absolute;
+    left:10px; right:10px; bottom:-2px;
+    height:3px;
+    background:var(--paprika);
+    border-radius:3px 3px 0 0;
+  }
+  .week-tab:hover{ color:var(--ink); }
+
+  /* ---------- MEAL CARDS ---------- */
+  .week-panel{ display:none; }
+  .week-panel.active{ display:block; }
+
+  .meal-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+
+  .meal-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--card-shadow);
+    position:relative;
+    overflow:hidden;
+    transition:opacity .2s ease;
+  }
+  .meal-card.is-empty{
+    background:repeating-linear-gradient(135deg, var(--flour-dim) 0 10px, #fff 10px 20px);
+    border-style:dashed;
+  }
+
+  .card-tab{
+    position:absolute;
+    top:0; left:18px;
+    background:var(--pantry-green);
+    color:var(--flour);
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    padding:5px 12px 4px;
+    border-radius:0 0 7px 7px;
+  }
+  .meal-card.is-leftovers .card-tab{ background:var(--ink-soft); }
+  .meal-card.is-empty .card-tab{ background:var(--line); color:var(--ink-soft); }
+
+  .card-body{
+    padding:30px 20px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .title-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .recipe-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:19px;
+    flex:1;
+    border:none;
+    background:none;
+    color:var(--ink);
+    padding:2px 4px;
+    border-radius:6px;
+    width:100%;
+  }
+  .recipe-title:focus{
+    outline:2px solid var(--butter);
+    background:var(--flour-dim);
+  }
+  .recipe-title.leftovers-label{
+    color:var(--ink-soft);
+    font-style:italic;
+    font-weight:500;
+  }
+
+  .card-actions{
+    display:flex;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    width:30px; height:30px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    transition:background .15s, color .15s, border-color .15s;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{ background:var(--flour-dim); color:var(--ink); }
+  .icon-btn.remove-btn:hover{ background:#fbe6de; color:var(--paprika-dim); border-color:#e9c3b2; }
+  .icon-btn svg{ width:15px; height:15px; }
+
+  .roles-block{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+  }
+  .role-group{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .role-label{
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+    color:var(--ink-soft);
+    flex-shrink:0;
+    width:58px;
+    margin-top:8px;
+  }
+  .ingredient-list{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    flex:1;
+  }
+  .ing-chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--flour-dim);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:5px 6px 5px 12px;
+    font-size:13px;
+  }
+  .ing-chip input{
+    border:none;
+    background:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    color:var(--ink);
+    width:auto;
+    min-width:20px;
+    max-width:160px;
+  }
+  .ing-chip input:focus{ outline:none; }
+  .ing-chip .ing-remove{
+    width:16px; height:16px;
+    border:none;
+    background:rgba(38,35,33,0.1);
+    border-radius:50%;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:11px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    padding:0;
+  }
+  .ing-chip .ing-remove:hover{ background:var(--paprika); color:#fff; }
+
+  .add-ing-btn{
+    border:1px dashed var(--line);
+    background:none;
+    border-radius:50%;
+    width:26px; height:26px;
+    font-size:14px;
+    line-height:1;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .add-ing-btn:hover{ border-color:var(--paprika); color:var(--paprika); }
+
+  .empty-card-body{
+    padding:34px 20px 26px;
+    text-align:center;
+  }
+  .empty-card-body p{
+    color:var(--ink-soft);
+    font-size:13.5px;
+    margin:0 0 12px;
+  }
+  .add-recipe-btn{
+    background:var(--ink);
+    color:var(--flour);
+    border:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:9px 18px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .add-recipe-btn:hover{ background:var(--pantry-green); }
+
+  /* ---------- SHOPPING DRAWER ---------- */
+  .drawer-overlay{
+    position:fixed; inset:0;
+    background:rgba(38,35,33,0.45);
+    backdrop-filter:blur(2px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    z-index:40;
+  }
+  .drawer-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .drawer{
+    position:fixed;
+    top:0; right:0;
+    height:100%;
+    width:min(420px, 100%);
+    background:var(--flour);
+    box-shadow:-12px 0 30px rgba(0,0,0,0.18);
+    transform:translateX(100%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+    z-index:41;
+    display:flex;
+    flex-direction:column;
+  }
+  .drawer.open{ transform:translateX(0); }
+
+  .drawer-head{
+    padding:22px 22px 16px;
+    border-bottom:2px solid var(--line);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .drawer-head h2{
+    font-family:'Fraunces', serif;
+    font-size:24px;
+    font-weight:600;
+    margin:0 0 2px;
+  }
+  .drawer-head p{
+    margin:0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .drawer-close{
+    border:none;
+    background:var(--flour-dim);
+    width:32px; height:32px;
+    border-radius:50%;
+    cursor:pointer;
+    color:var(--ink);
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .drawer-close:hover{ background:var(--line); }
+
+  .drawer-body{
+    flex:1;
+    overflow-y:auto;
+    padding:8px 22px 22px;
+  }
+
+  .shop-cat{
+    margin-top:18px;
+  }
+  .shop-cat h3{
+    font-size:11.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--paprika);
+    font-weight:700;
+    margin:0 0 8px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .shop-cat h3::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  .shop-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 4px;
+    border-bottom:1px solid var(--flour-dim);
+    font-size:14.5px;
+  }
+  .shop-item label{
+    flex:1;
+    cursor:pointer;
+  }
+  .shop-item .qty-badge{
+    font-size:11px;
+    background:var(--butter);
+    color:var(--ink);
+    font-weight:700;
+    border-radius:999px;
+    padding:1px 7px;
+  }
+  .shop-item input[type=checkbox]{
+    width:18px; height:18px;
+    accent-color:var(--pantry-green);
+    flex-shrink:0;
+    cursor:pointer;
+  }
+  .shop-item.checked label{
+    text-decoration:line-through;
+    color:var(--ink-soft);
+    opacity:.6;
+  }
+
+  .drawer-foot{
+    padding:14px 22px 20px;
+    border-top:1px solid var(--line);
+    display:flex;
+    gap:10px;
+  }
+  .drawer-foot button{
+    flex:1;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:11px;
+    border-radius:999px;
+    cursor:pointer;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+  }
+  .drawer-foot button:hover{ background:var(--flour-dim); }
+  .drawer-foot button.primary{
+    background:var(--pantry-green);
+    color:var(--flour);
+    border-color:var(--pantry-green);
+  }
+  .drawer-foot button.primary:hover{ background:var(--pantry-green-dim); }
+
+  .empty-list-msg{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    padding:40px 10px;
+  }
+
+  /* footer note */
+  .foot-note{
+    max-width:880px;
+    margin:34px auto 0;
+    padding:0 20px;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:center;
+  }
+
+  .backup-bar{
+    max-width:880px;
+    margin:14px auto 0;
+    padding:14px 20px 0;
+    border-top:1px solid var(--line);
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    gap:10px 16px;
+  }
+  .backup-status{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    opacity:.75;
+    flex-basis:100%;
+    text-align:center;
+  }
+  .backup-actions{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:8px;
+  }
+  .backup-actions button{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    border-radius:999px;
+    padding:7px 14px;
+    cursor:pointer;
+  }
+  .backup-actions button:hover{ background:var(--flour-dim); color:var(--ink); }
+  .backup-actions button.ghost{
+    border-color:transparent;
+    background:none;
+    text-decoration:underline;
+    text-decoration-color:var(--line);
+  }
+  .backup-actions button.ghost:hover{ color:var(--paprika); text-decoration-color:var(--paprika); }
+
+  .sync-panel{
+    max-width:880px;
+    margin:14px auto 0;
+    padding:0 20px;
+  }
+  .sync-panel-inner{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--card-shadow);
+    padding:20px 22px;
+  }
+  .sync-panel-inner h3{
+    font-family:'Fraunces', serif;
+    font-size:17px;
+    font-weight:600;
+    margin:0 0 6px;
+  }
+  .sync-help{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    margin:0 0 14px;
+  }
+  .sync-field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin-bottom:12px;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink-soft);
+  }
+  .sync-field input{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    font-weight:400;
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 11px;
+    background:var(--flour-dim);
+  }
+  .sync-field input:focus{ outline:2px solid var(--butter); background:#fff; }
+  .sync-panel-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+  .sync-panel-actions button{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    border-radius:999px;
+    padding:8px 15px;
+    cursor:pointer;
+  }
+  .sync-panel-actions button:hover{ background:var(--flour-dim); }
+  .sync-panel-actions button.primary{
+    background:var(--pantry-green);
+    color:var(--flour);
+    border-color:var(--pantry-green);
+  }
+  .sync-panel-actions button.primary:hover{ background:var(--pantry-green-dim); }
+  .sync-panel-actions button.ghost{
+    border-color:transparent;
+    text-decoration:underline;
+    text-decoration-color:var(--line);
+    color:var(--ink-soft);
+  }
+  .sync-panel-actions button.ghost:hover{ color:var(--paprika); text-decoration-color:var(--paprika); }
+  .sync-warning{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    opacity:.8;
+    margin:14px 0 0;
+    line-height:1.5;
+  }
+
+  @media (max-width:600px){
+    .wrap{padding:20px 14px 0;}
+    header h1{font-size:26px;}
+    .shop-btn{padding:11px 16px; font-size:13px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Four Weeks · One Cart</div>
+      <h1>The <em>Grelfand</em> Plan</h1>
+    </div>
+    <button class="shop-btn" id="openDrawerBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+      Shopping list
+      <span class="count" id="shopCount">0</span>
+    </button>
+  </header>
+
+  <nav class="week-tabs" id="weekTabs"></nav>
+
+  <div id="weekPanels"></div>
+</div>
+
+<p class="foot-note">Tap any recipe name or ingredient to edit it. Swaps and additions update the shopping list automatically.</p>
+
+<div class="backup-bar">
+  <span class="backup-status" id="backupStatus"></span>
+  <span class="backup-status" id="syncStatus"></span>
+  <div class="backup-actions">
+    <button id="exportBtn" type="button">Export backup</button>
+    <button id="importBtn" type="button">Import backup</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+    <button id="syncSettingsBtn" type="button">Sync settings</button>
+    <button id="resetBtn" type="button" class="ghost">Reset to original plan</button>
+  </div>
+</div>
+
+<div class="sync-panel" id="syncPanel" hidden>
+  <div class="sync-panel-inner">
+    <h3>Share this plan across devices</h3>
+    <p class="sync-help">
+      Set this up once using a Google Sheet + Apps Script (see the
+      SyncBackend.gs file you got alongside this page). Paste the
+      deployed Web App URL and the passphrase you set in the script.
+      This is stored only in this browser, not in this HTML file.
+    </p>
+    <label class="sync-field">
+      <span>Web App URL</span>
+      <input type="text" id="syncUrlInput" placeholder="https://script.google.com/macros/s/XXXX/exec">
+    </label>
+    <label class="sync-field">
+      <span>Passphrase</span>
+      <input type="text" id="syncKeyInput" placeholder="grelfand-2026">
+    </label>
+    <div class="sync-panel-actions">
+      <button id="syncSaveBtn" type="button" class="primary">Save & sync now</button>
+      <button id="syncPullBtn" type="button">Pull shared plan now</button>
+      <button id="syncDisableBtn" type="button" class="ghost">Turn off sync on this device</button>
+    </div>
+    <p class="sync-warning">
+      Anyone with this URL and passphrase can read or overwrite the shared plan —
+      there's no login behind it. Fine for a household meal plan; don't reuse this
+      pattern for anything sensitive.
+    </p>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer" role="dialog" aria-label="Shopping list">
+  <div class="drawer-head">
+    <div>
+      <h2>Shopping list</h2>
+      <p>Pulled straight from this week's recipe cards</p>
+    </div>
+    <button class="drawer-close" id="closeDrawerBtn" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot">
+    <button id="clearChecksBtn">Uncheck all</button>
+    <button class="primary" id="checkAllBtn">Check all</button>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------------------------------
+   DATA MODEL
+   Each week is an ordered array of meal-card objects:
+   { day, title, ingredients: [string,...] }
+   Empty title => renders as an "empty slot" card with an
+   Add Recipe button. Editing is all in-memory (no storage).
+--------------------------------------------------------- */
+
+const weekThemes = {
+  "Week 1": "Italian Comfort",
+  "Week 2": "American Classics",
+  "Week 3": "Global Flavors",
+  "Week 4": "Pantry Cleanout"
+};
+
+const mealData = {
+  "Week 1": [
+    {day:"Breakfast", title:"Tropical Green Smoothie", ingredients:[
+      {name:"Spinach", cat:"Produce"},{name:"Tropical Fruit", cat:"Produce"},
+      {name:"Greek Yogurt", cat:"Dairy"},{name:"Ginger", cat:"Produce"}
+    ]},
+    {day:"Lunch", title:"Mediterranean Wrap", ingredients:[
+      {name:"Spinach", cat:"Produce"},{name:"Cherry Tomatoes", cat:"Produce"},
+      {name:"Pita Wrap", cat:"Other"},{name:"Chicken/Eggs", cat:"Meat"},
+      {name:"Hummus", cat:"Other"},{name:"Red Onion", cat:"Produce"},{name:"Parmesan", cat:"Dairy"}
+    ]},
+    {day:"Soup/Stew", title:"Tortilla Soup", ingredients:[
+      {name:"Rotel", cat:"Other"},{name:"Black Beans", cat:"Other"},
+      {name:"Refried Beans", cat:"Other"},{name:"Chicken", cat:"Meat"}
+    ]},
+    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
+      {name:"Asparagus", cat:"Produce"},{name:"Corn", cat:"Produce"},
+      {name:"Whole Chicken", cat:"Meat"},{name:"Beer", cat:"Other"}
+    ]},
+    {day:"Monday", title:"Pasta Primavera", ingredients:[
+      {name:"Asparagus", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
+      {name:"Pasta", cat:"Other"},{name:"Chicken", cat:"Meat"},
+      {name:"Red Onion", cat:"Produce"},{name:"Parmesan", cat:"Dairy"}
+    ]},
+    {day:"Tuesday", title:"Sheet Pan Sausage", ingredients:[
+      {name:"Brussels Sprouts", cat:"Produce"},{name:"Red Onions", cat:"Produce"},
+      {name:"Potatoes", cat:"Produce"},{name:"Sausage", cat:"Meat"},{name:"Bell Peppers", cat:"Produce"}
+    ]},
+    {day:"Wednesday", title:"Lasagna Soup", ingredients:[
+      {name:"Diced & Crushed Tomatoes", cat:"Other"},{name:"Mushrooms", cat:"Produce"},
+      {name:"Lasagna Noodles", cat:"Other"},{name:"Sausage", cat:"Meat"},{name:"Ricotta Cheese", cat:"Dairy"}
+    ]},
+    {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
+    {day:"Friday", title:"Salmon Dinner", ingredients:[
+      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
+    ]}
+  ],
+  "Week 2": [
+    {day:"Breakfast", title:"Berry Pie Smoothie", ingredients:[
+      {name:"Banana", cat:"Produce"},{name:"Berries", cat:"Produce"},
+      {name:"Greek Yogurt", cat:"Dairy"},{name:"Walnuts", cat:"Other"}
+    ]},
+    {day:"Lunch", title:"Thai Peanut Wrap", ingredients:[
+      {name:"Cabbage Mix", cat:"Produce"},{name:"Cilantro", cat:"Produce"},
+      {name:"Tortillas", cat:"Other"},{name:"Chicken", cat:"Meat"},{name:"Peanut Sauce", cat:"Other"}
+    ]},
+    {day:"Soup/Stew", title:"Italian Tortellini Stew", ingredients:[
+      {name:"Zucchini", cat:"Produce"},{name:"Spinach", cat:"Produce"},{name:"Tortellini", cat:"Other"}
+    ]},
+    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
+      {name:"Zucchini", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
+    ]},
+    {day:"Monday", title:"Chicken Fried Rice", ingredients:[
+      {name:"Cabbage Mix", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
+      {name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
+    ]},
+    {day:"Tuesday", title:"Steak Fajitas", ingredients:[
+      {name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},
+      {name:"Refried Beans", cat:"Other"},{name:"Steak", cat:"Meat"},{name:"Cheddar", cat:"Dairy"}
+    ]},
+    {day:"Wednesday", title:"Philly Cheesesteaks", ingredients:[
+      {name:"Mushrooms", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"},
+      {name:"Hoagie Rolls", cat:"Other"},{name:"Steak", cat:"Meat"},{name:"Cheddar", cat:"Dairy"}
+    ]},
+    {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
+    {day:"Friday", title:"Salmon Dinner", ingredients:[
+      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
+    ]}
+  ],
+  "Week 3": [
+    {day:"Breakfast", title:"PB Smoothie", ingredients:[
+      {name:"Banana", cat:"Produce"},{name:"Spinach", cat:"Produce"},
+      {name:"Peanut Butter", cat:"Other"},{name:"Greek Yogurt", cat:"Dairy"}
+    ]},
+    {day:"Lunch", title:"Kale & Chickpea Wrap", ingredients:[
+      {name:"Kale", cat:"Produce"},{name:"Craisins", cat:"Other"},
+      {name:"Pita Wrap", cat:"Other"},{name:"Roasted Chickpeas", cat:"Other"},{name:"Olive Oil", cat:"Other"}
+    ]},
+    {day:"Soup/Stew", title:"Chicken Noodle Soup", ingredients:[
+      {name:"Carrots", cat:"Produce"},{name:"Celery", cat:"Produce"},
+      {name:"Egg Noodles", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
+    ]},
+    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
+      {name:"Carrots", cat:"Produce"},{name:"Celery", cat:"Produce"},
+      {name:"Sweet Potatoes", cat:"Produce"},{name:"Whole Chicken", cat:"Meat"},{name:"Onions", cat:"Produce"}
+    ]},
+    {day:"Monday", title:"Chinese Eggplant", ingredients:[
+      {name:"Eggplant", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
+      {name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"},{name:"Oyster Sauce", cat:"Other"}
+    ]},
+    {day:"Tuesday", title:"Naf Naf Bowls", ingredients:[
+      {name:"Eggplant", cat:"Produce"},{name:"Artichokes", cat:"Produce"},
+      {name:"Couscous", cat:"Other"},{name:"Chicken Thigh", cat:"Meat"},
+      {name:"Roasted Carrots", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"}
+    ]},
+    {day:"Wednesday", title:"Quick Curry", ingredients:[
+      {name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},
+      {name:"Rice", cat:"Other"},{name:"Chicken Thigh", cat:"Meat"},
+      {name:"Coconut Milk", cat:"Other"},{name:"Curry Paste", cat:"Other"}
+    ]},
+    {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
+    {day:"Friday", title:"Salmon Dinner", ingredients:[
+      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
+    ]}
+  ],
+  "Week 4": [
+    {day:"Breakfast", title:"Pantry Smoothie", ingredients:[]},
+    {day:"Lunch", title:"Pantry Egg Salad Wrap", ingredients:[]},
+    {day:"Soup/Stew", title:"Pantry Vegetable Lentil Stew", ingredients:[]},
+    {day:"Sunday", title:"Steak Night", ingredients:[]},
+    {day:"Monday", title:"Pantry Pasta Night", ingredients:[]},
+    {day:"Tuesday", title:"Pantry Taco Night", ingredients:[
+      {name:"Ground Turkey", cat:"Meat"}
+    ]},
+    {day:"Wednesday", title:"Pantry Stir Fry Night", ingredients:[
+      {name:"Chicken Thigh", cat:"Meat"}
+    ]},
+    {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
+    {day:"Friday", title:"Salmon Dinner", ingredients:[
+      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
+    ]}
+  ]
+};
+
+// Checked-off state for shopping list, keyed by normalized ingredient name.
+let checkedItems = {};
+
+/* ---------------------------------------------------------
+   PERSISTENCE
+   - Autosaves mealData + checkedItems + activeWeek to
+     localStorage on every edit, and reloads them on page
+     load, so closing and reopening this file keeps your
+     changes (as long as it's the same browser/device).
+   - Also offers Export/Import as a portable JSON backup,
+     for moving the plan to another browser or device, or
+     just keeping a snapshot of a specific week.
+   - Optionally syncs that same JSON to a Google Sheet via
+     a small Apps Script Web App, so multiple browsers/
+     devices can share one plan. See SYNC below.
+--------------------------------------------------------- */
+const STORAGE_KEY = 'grelfandPlan.v1';
+const SYNC_CONFIG_KEY = 'grelfandPlan.syncConfig.v1';
+
+// Snapshot of the original recipe data, used by "Reset to original plan".
+const defaultMealData = JSON.parse(JSON.stringify(mealData));
+
+const VALID_DAYS = new Set(["Breakfast","Lunch","Soup/Stew","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"]);
+const VALID_WEEKS = new Set(["Week 1","Week 2","Week 3","Week 4"]);
+
+// Strict shape check before we ever trust incoming data (from localStorage,
+// an imported file, or the sync server) enough to render it. Anything that
+// doesn't match this shape is rejected rather than partially applied.
+// Week names and day names are restricted to fixed whitelists (rather than
+// just "is a string") because both get inserted via innerHTML when rendering
+// tabs and empty-slot cards — an unvalidated string there would be a stored
+// XSS hole. Titles and ingredient names are also required to be strings,
+// but those are only ever rendered via .value/.textContent, never innerHTML,
+// so arbitrary text in them is safe to display (just not executed).
+function isValidPlanShape(payload){
+  if(!payload || typeof payload !== 'object') return false;
+  if(!payload.mealData || typeof payload.mealData !== 'object') return false;
+  for(const week of Object.keys(payload.mealData)){
+    if(!VALID_WEEKS.has(week)) return false;
+    const meals = payload.mealData[week];
+    if(!Array.isArray(meals)) return false;
+    for(const meal of meals){
+      if(typeof meal !== 'object' || meal === null) return false;
+      if(typeof meal.day !== 'string' || !VALID_DAYS.has(meal.day)) return false;
+      if(typeof meal.title !== 'string') return false;
+      if(!Array.isArray(meal.ingredients)) return false;
+      for(const ing of meal.ingredients){
+        if(typeof ing !== 'object' || ing === null) return false;
+        if(typeof ing.name !== 'string') return false;
+        if(typeof ing.cat !== 'string') return false;
+      }
+    }
+  }
+  if(payload.checkedItems !== undefined && typeof payload.checkedItems !== 'object') return false;
+  if(payload.activeWeek !== undefined && typeof payload.activeWeek !== 'string') return false;
+  return true;
+}
+
+function saveState(){
+  try{
+    const payload = { mealData, checkedItems, activeWeek, savedAt: new Date().toISOString() };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    if(typeof updateBackupStatus === 'function') updateBackupStatus();
+    if(typeof queueSyncPush === 'function') queueSyncPush(payload);
+  }catch(e){
+    console.warn('Could not save meal plan to this browser:', e);
+  }
+}
+
+function applyState(payload){
+  if(!isValidPlanShape(payload)) return false;
+  Object.keys(mealData).forEach(week => { delete mealData[week]; });
+  Object.keys(payload.mealData).forEach(week => { mealData[week] = payload.mealData[week]; });
+  checkedItems = (payload.checkedItems && typeof payload.checkedItems === 'object') ? payload.checkedItems : {};
+  if(payload.activeWeek && mealData[payload.activeWeek]) activeWeek = payload.activeWeek;
+  return true;
+}
+
+function loadState(){
+  try{
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    return applyState(JSON.parse(raw));
+  }catch(e){
+    console.warn('Could not load a saved meal plan from this browser:', e);
+    return false;
+  }
+}
+
+function exportState(){
+  const payload = { mealData, checkedItems, activeWeek, savedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `grelfand-plan-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importStateFromFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const payload = JSON.parse(e.target.result);
+      if(applyState(payload)){
+        renderTabs();
+        renderPanels();
+        saveState();
+      } else {
+        alert("That file doesn't look like a Grelfand Plan backup.");
+      }
+    }catch(err){
+      alert("Couldn't read that file — make sure it's a Grelfand Plan backup (.json) you exported from here.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------------------------------------------------------
+   SYNC (optional) — shares the plan across browsers/devices
+   via a Google Sheet + Apps Script Web App you set up once.
+   Only ever sends/receives a plain JSON string under a
+   "data" field. Never rendered as HTML, never eval'd.
+
+   Config (the Web App URL + passphrase) lives only in this
+   browser's localStorage — never hardcoded in this file —
+   so the page works with sync OFF by default until someone
+   fills in Sync Settings.
+--------------------------------------------------------- */
+let syncPushTimer = null;
+let syncStatusEl = null;
+
+function getSyncConfig(){
+  try{
+    const raw = window.localStorage.getItem(SYNC_CONFIG_KEY);
+    if(!raw) return null;
+    const cfg = JSON.parse(raw);
+    if(cfg && typeof cfg.url === 'string' && cfg.url){
+      return cfg;
+    }
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function saveSyncConfig(cfg){
+  window.localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function clearSyncConfig(){
+  window.localStorage.removeItem(SYNC_CONFIG_KEY);
+}
+
+function setSyncStatus(text){
+  if(!syncStatusEl) syncStatusEl = document.getElementById('syncStatus');
+  if(syncStatusEl) syncStatusEl.textContent = text;
+}
+
+// Debounced push: edits fire often (every blur), so we wait a beat after
+// the last change before sending anything over the network.
+function queueSyncPush(payload){
+  const cfg = getSyncConfig();
+  if(!cfg) return;
+  clearTimeout(syncPushTimer);
+  syncPushTimer = setTimeout(() => pushToSync(payload, cfg), 800);
+}
+
+async function pushToSync(payload, cfg){
+  try{
+    setSyncStatus('Syncing…');
+    const url = cfg.url + (cfg.url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(cfg.key || '');
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
+      body: JSON.stringify({ data: JSON.stringify(payload) })
+    });
+    const json = await res.json();
+    if(json && json.ok){
+      setSyncStatus('Synced just now.');
+    } else {
+      setSyncStatus('Sync failed: ' + (json && json.error ? json.error : 'unknown error'));
+    }
+  }catch(e){
+    setSyncStatus('Sync failed — check your connection or Sync Settings.');
+  }
+}
+
+async function pullFromSync(){
+  const cfg = getSyncConfig();
+  if(!cfg) return false;
+  try{
+    setSyncStatus('Checking for shared updates…');
+    const url = cfg.url + (cfg.url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(cfg.key || '');
+    const res = await fetch(url, { method: 'GET' });
+    const json = await res.json();
+    if(!json || !json.ok){
+      setSyncStatus('Could not reach the shared plan: ' + (json && json.error ? json.error : 'unknown error'));
+      return false;
+    }
+    if(!json.data){
+      setSyncStatus('Shared sheet is empty — this device\'s plan will be pushed there next edit.');
+      return false;
+    }
+    let payload;
+    try{
+      payload = JSON.parse(json.data);
+    }catch(parseErr){
+      setSyncStatus('Shared data was not valid — ignoring it.');
+      return false;
+    }
+    if(!isValidPlanShape(payload)){
+      setSyncStatus('Shared data didn\'t match the expected format — ignoring it.');
+      return false;
+    }
+    applyState(payload);
+    setSyncStatus('Loaded the shared plan.');
+    return true;
+  }catch(e){
+    setSyncStatus('Could not reach the shared plan — showing this device\'s saved copy instead.');
+    return false;
+  }
+}
+
+/* ---------------------------------------------------------
+   CATEGORIES — simple, fixed set used identically on the
+   recipe cards and the shopping list: Meat, Produce, Dairy,
+   Other. Each ingredient carries its own `cat` field set
+   directly in the data above, so cards and list always
+   agree. If something's miscategorized, just change its
+   `cat` value in mealData — no guessing logic involved.
+--------------------------------------------------------- */
+const categoryOrder = ["Meat","Produce","Dairy","Other"];
+const validCats = new Set(categoryOrder);
+
+function categorize(cat){
+  return validCats.has(cat) ? cat : "Other";
+}
+
+
+/* ---------------------------------------------------------
+   RENDER: WEEK TABS
+--------------------------------------------------------- */
+let activeWeek = "Week 1";
+
+function renderTabs(){
+  const tabs = document.getElementById('weekTabs');
+  tabs.innerHTML = '';
+  Object.keys(mealData).forEach(week => {
+    const btn = document.createElement('button');
+    btn.className = 'week-tab' + (week === activeWeek ? ' active' : '');
+    btn.innerHTML = `${week}<span class="wk-theme">${weekThemes[week] || ''}</span>`;
+    btn.addEventListener('click', () => {
+      activeWeek = week;
+      renderTabs();
+      renderPanels();
+    });
+    tabs.appendChild(btn);
+  });
+}
+
+/* ---------------------------------------------------------
+   RENDER: MEAL CARDS
+--------------------------------------------------------- */
+function renderPanels(){
+  const container = document.getElementById('weekPanels');
+  container.innerHTML = '';
+
+  Object.keys(mealData).forEach(week => {
+    const panel = document.createElement('div');
+    panel.className = 'week-panel' + (week === activeWeek ? ' active' : '');
+    panel.dataset.week = week;
+
+    const grid = document.createElement('div');
+    grid.className = 'meal-grid';
+
+    mealData[week].forEach((meal, idx) => {
+      grid.appendChild(renderCard(week, idx, meal));
+    });
+
+    panel.appendChild(grid);
+    container.appendChild(panel);
+  });
+
+  updateShopCount();
+  saveState();
+}
+
+function renderCard(week, idx, meal){
+  const card = document.createElement('div');
+  const isEmpty = !meal.title || meal.title.trim() === '';
+  card.className = 'meal-card' + (isEmpty ? ' is-empty' : '') + (meal.isLeftovers ? ' is-leftovers' : '');
+
+  const tab = document.createElement('div');
+  tab.className = 'card-tab';
+  tab.textContent = meal.day;
+  card.appendChild(tab);
+
+  if(isEmpty){
+    const body = document.createElement('div');
+    body.className = 'empty-card-body';
+    body.innerHTML = `<p>No recipe planned for ${meal.day.toLowerCase()} yet.</p>`;
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-recipe-btn';
+    addBtn.textContent = '+ Add a recipe';
+    addBtn.addEventListener('click', () => {
+      meal.title = 'New Recipe';
+      meal.ingredients = [];
+      renderPanels();
+      // focus the new title field after render
+      requestAnimationFrame(() => {
+        const input = document.querySelector(`[data-week="${week}"] [data-idx="${idx}"] .recipe-title`);
+        if(input){ input.focus(); input.select(); }
+      });
+    });
+    body.appendChild(addBtn);
+    card.appendChild(body);
+    card.dataset.idx = idx;
+    return card;
+  }
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  body.dataset.idx = idx;
+
+  // Title row
+  const titleRow = document.createElement('div');
+  titleRow.className = 'title-row';
+
+  const titleInput = document.createElement('input');
+  titleInput.className = 'recipe-title' + (meal.isLeftovers ? ' leftovers-label' : '');
+  titleInput.value = meal.title;
+  titleInput.setAttribute('aria-label', `${meal.day} recipe name`);
+  titleInput.addEventListener('input', e => { meal.title = e.target.value; });
+  titleInput.addEventListener('blur', () => { renderTabs(); saveState(); });
+  titleRow.appendChild(titleInput);
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+
+  if(!meal.isLeftovers){
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'icon-btn remove-btn';
+    removeBtn.title = 'Remove this recipe';
+    removeBtn.setAttribute('aria-label', 'Remove recipe');
+    removeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>`;
+    removeBtn.addEventListener('click', () => {
+      meal.title = '';
+      meal.ingredients = [];
+      renderPanels();
+      renderTabs();
+    });
+    actions.appendChild(removeBtn);
+  }
+
+  titleRow.appendChild(actions);
+  body.appendChild(titleRow);
+
+  if(!meal.isLeftovers){
+    // Ingredients, grouped by role
+    const rolesBlock = document.createElement('div');
+    rolesBlock.className = 'roles-block';
+
+    const catOrder = ["Meat","Produce","Dairy","Other"];
+    catOrder.forEach(cat => {
+      rolesBlock.appendChild(renderCatGroup(week, idx, meal, cat));
+    });
+
+    body.appendChild(rolesBlock);
+  } else {
+    const note = document.createElement('p');
+    note.style.cssText = 'font-size:13px;color:var(--ink-soft);margin:0;';
+    note.textContent = 'Clear-the-fridge night — eat through whatever\'s left from the week.';
+    body.appendChild(note);
+  }
+
+  card.appendChild(body);
+  card.dataset.idx = idx;
+  return card;
+}
+
+function renderCatGroup(week, idx, meal, cat){
+  const group = document.createElement('div');
+  group.className = 'role-group';
+  group.dataset.cat = cat;
+
+  const label = document.createElement('span');
+  label.className = 'role-label';
+  label.textContent = cat;
+  group.appendChild(label);
+
+  const chipRow = document.createElement('div');
+  chipRow.className = 'ingredient-list';
+
+  meal.ingredients.forEach((ing, ingIdx) => {
+    if(categorize(ing.cat) !== cat) return;
+    chipRow.appendChild(renderChip(meal, ingIdx, ing));
+  });
+
+  const addChip = document.createElement('button');
+  addChip.className = 'add-ing-btn';
+  addChip.textContent = '+';
+  addChip.title = `Add a ${cat.toLowerCase()} item`;
+  addChip.addEventListener('click', () => {
+    meal.ingredients.push({ name: '', cat });
+    renderPanels();
+    requestAnimationFrame(() => {
+      const groups = document.querySelectorAll(`[data-idx="${idx}"] .role-group`);
+      const thisGroup = Array.from(groups).find(g => g.dataset.cat === cat);
+      if(thisGroup){
+        const inputs = thisGroup.querySelectorAll('.ing-chip input');
+        const last = inputs[inputs.length - 1];
+        if(last) last.focus();
+      }
+    });
+  });
+  chipRow.appendChild(addChip);
+
+  group.appendChild(chipRow);
+  return group;
+}
+
+function renderChip(meal, ingIdx, ing){
+  const chip = document.createElement('div');
+  chip.className = 'ing-chip';
+
+  const input = document.createElement('input');
+  input.value = ing.name;
+  input.placeholder = 'ingredient';
+  input.size = Math.max(ing.name.length, 6);
+  input.addEventListener('input', e => {
+    meal.ingredients[ingIdx].name = e.target.value;
+    e.target.size = Math.max(e.target.value.length, 6);
+  });
+  input.addEventListener('blur', () => {
+    refreshShoppingListIfOpen();
+    saveState();
+  });
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.target.blur(); }
+  });
+  chip.appendChild(input);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'ing-remove';
+  removeBtn.innerHTML = '&times;';
+  removeBtn.title = 'Remove ingredient';
+  removeBtn.addEventListener('click', () => {
+    meal.ingredients.splice(ingIdx, 1);
+    renderPanels();
+    refreshShoppingListIfOpen();
+  });
+  chip.appendChild(removeBtn);
+
+  return chip;
+}
+
+/* ---------------------------------------------------------
+   SHOPPING LIST (auto-generated from current week's cards)
+--------------------------------------------------------- */
+function buildShoppingList(){
+  const counts = {}; // normalized name -> {label, cat, count}
+  mealData[activeWeek].forEach(meal => {
+    meal.ingredients.forEach(ing => {
+      const label = (ing.name || '').trim();
+      if(!label) return;
+      const key = label.toLowerCase();
+      if(!counts[key]){
+        counts[key] = { label, cat: ing.cat, count: 0 };
+      }
+      counts[key].count += 1;
+    });
+  });
+
+  const byCategory = {};
+  Object.values(counts).forEach(item => {
+    const cat = categorize(item.cat);
+    if(!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(item);
+  });
+
+  Object.values(byCategory).forEach(list => list.sort((a,b) => a.label.localeCompare(b.label)));
+
+  return byCategory;
+}
+
+function updateShopCount(){
+  const byCategory = buildShoppingList();
+  let total = 0;
+  Object.values(byCategory).forEach(list => total += list.length);
+  document.getElementById('shopCount').textContent = total;
+}
+
+function renderShoppingDrawer(){
+  const body = document.getElementById('drawerBody');
+  body.innerHTML = '';
+
+  const byCategory = buildShoppingList();
+  const cats = categoryOrder.filter(c => byCategory[c] && byCategory[c].length);
+
+  document.querySelector('.drawer-head p').textContent = `Pulled from ${activeWeek}'s recipe cards`;
+
+  if(cats.length === 0){
+    body.innerHTML = `<p class="empty-list-msg">No ingredients yet — add a recipe or ingredient on the ${activeWeek} tab and they'll show up here.</p>`;
+    return;
+  }
+
+  cats.forEach(cat => {
+    const section = document.createElement('div');
+    section.className = 'shop-cat';
+    const h3 = document.createElement('h3');
+    h3.textContent = cat;
+    section.appendChild(h3);
+
+    byCategory[cat].forEach(item => {
+      const key = activeWeek + '::' + item.label.toLowerCase();
+      const row = document.createElement('div');
+      row.className = 'shop-item' + (checkedItems[key] ? ' checked' : '');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = 'chk-' + key.replace(/[^a-z0-9]/gi, '-');
+      checkbox.checked = !!checkedItems[key];
+      checkbox.addEventListener('change', () => {
+        checkedItems[key] = checkbox.checked;
+        row.classList.toggle('checked', checkbox.checked);
+        saveState();
+      });
+      row.appendChild(checkbox);
+
+      const label = document.createElement('label');
+      label.setAttribute('for', checkbox.id);
+      label.textContent = item.label;
+      row.appendChild(label);
+
+      if(item.count > 1){
+        const badge = document.createElement('span');
+        badge.className = 'qty-badge';
+        badge.textContent = `×${item.count}`;
+        row.appendChild(badge);
+      }
+
+      section.appendChild(row);
+    });
+
+    body.appendChild(section);
+  });
+}
+
+function refreshShoppingListIfOpen(){
+  updateShopCount();
+  if(document.getElementById('drawer').classList.contains('open')){
+    renderShoppingDrawer();
+  }
+}
+
+/* ---------------------------------------------------------
+   DRAWER OPEN / CLOSE
+--------------------------------------------------------- */
+function openDrawer(){
+  renderShoppingDrawer();
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
+document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+
+document.getElementById('checkAllBtn').addEventListener('click', () => {
+  const byCategory = buildShoppingList();
+  Object.values(byCategory).flat().forEach(item => {
+    checkedItems[activeWeek + '::' + item.label.toLowerCase()] = true;
+  });
+  renderShoppingDrawer();
+  saveState();
+});
+document.getElementById('clearChecksBtn').addEventListener('click', () => {
+  Object.keys(checkedItems).forEach(k => {
+    if(k.startsWith(activeWeek + '::')) checkedItems[k] = false;
+  });
+  renderShoppingDrawer();
+  saveState();
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeDrawer();
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  exportState();
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(file) importStateFromFile(file);
+  e.target.value = '';
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  const sure = confirm("Reset everything back to the original Grelfand Plan? This clears your edits and checked items on this device.");
+  if(!sure) return;
+  applyState({ mealData: defaultMealData, checkedItems: {}, activeWeek: "Week 1" });
+  renderTabs();
+  renderPanels();
+  saveState();
+});
+
+function updateBackupStatus(){
+  const el = document.getElementById('backupStatus');
+  try{
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if(!raw){ el.textContent = 'Not saved on this device yet — edits will autosave as you go.'; return; }
+    const payload = JSON.parse(raw);
+    if(payload.savedAt){
+      const d = new Date(payload.savedAt);
+      el.textContent = `Autosaved on this device · last change ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`;
+    } else {
+      el.textContent = 'Autosaved on this device.';
+    }
+  }catch(e){
+    el.textContent = '';
+  }
+}
+
+/* ---------------------------------------------------------
+   SYNC SETTINGS PANEL
+--------------------------------------------------------- */
+const syncPanel = document.getElementById('syncPanel');
+const syncUrlInput = document.getElementById('syncUrlInput');
+const syncKeyInput = document.getElementById('syncKeyInput');
+
+function openSyncPanel(){
+  const cfg = getSyncConfig();
+  syncUrlInput.value = cfg ? cfg.url : '';
+  syncKeyInput.value = cfg ? (cfg.key || '') : '';
+  syncPanel.hidden = false;
+}
+function closeSyncPanel(){ syncPanel.hidden = true; }
+
+document.getElementById('syncSettingsBtn').addEventListener('click', () => {
+  if(syncPanel.hidden){ openSyncPanel(); } else { closeSyncPanel(); }
+});
+
+document.getElementById('syncSaveBtn').addEventListener('click', async () => {
+  const url = syncUrlInput.value.trim();
+  const key = syncKeyInput.value.trim();
+  if(!url){ setSyncStatus('Enter a Web App URL first.'); return; }
+  saveSyncConfig({ url, key });
+  setSyncStatus('Saved. Syncing…');
+  const pulled = await pullFromSync();
+  if(!pulled){
+    // Nothing usable on the sheet yet (or it's brand new) — push what we have.
+    saveState();
+  }
+  renderTabs();
+  renderPanels();
+});
+
+document.getElementById('syncPullBtn').addEventListener('click', async () => {
+  const cfg = getSyncConfig();
+  if(!cfg){ setSyncStatus('Save Sync Settings first.'); return; }
+  const pulled = await pullFromSync();
+  if(pulled){
+    renderTabs();
+    renderPanels();
+  }
+});
+
+document.getElementById('syncDisableBtn').addEventListener('click', () => {
+  clearSyncConfig();
+  setSyncStatus('Sync turned off on this device. Your local copy is unaffected.');
+  closeSyncPanel();
+});
+
+/* ---------------------------------------------------------
+   INIT
+--------------------------------------------------------- */
+loadState();         // fall back to this device's last saved copy first
+renderTabs();
+renderPanels();
+updateBackupStatus();
+
+if(getSyncConfig()){
+  pullFromSync().then(pulled => {
+    if(pulled){
+      renderTabs();
+      renderPanels();
+    }
+  });
+}
+
+
+</script>
+
+</body>
+</html>
