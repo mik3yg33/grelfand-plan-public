@@ -962,15 +962,29 @@ function isValidPlanShape(payload){
   return true;
 }
 
-function saveState(){
+// Writes to this browser's local storage only — never touches the sync
+// server. Safe to call any time, including on page load or when just
+// navigating between week tabs, since it can't clobber the shared sheet.
+function saveLocal(){
   try{
     const payload = { mealData, checkedItems, activeWeek, savedAt: new Date().toISOString() };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     if(typeof updateBackupStatus === 'function') updateBackupStatus();
-    if(typeof queueSyncPush === 'function') queueSyncPush(payload);
+    return payload;
   }catch(e){
     console.warn('Could not save meal plan to this browser:', e);
+    return null;
   }
+}
+
+// Saves locally AND queues a push to the shared sync server. Call this only
+// in response to an actual user edit (adding/removing a recipe or
+// ingredient, editing a title, checking off a shopping item) — never from
+// a render-only pass like initial page load or restoring a pulled plan,
+// or a slow pull can get clobbered by a stale push that started first.
+function saveState(){
+  const payload = saveLocal();
+  if(payload && typeof queueSyncPush === 'function') queueSyncPush(payload);
 }
 
 // One-time migration: older saved/exported plans used "Soup/Stew" as a day
@@ -1180,6 +1194,7 @@ function renderTabs(){
       activeWeek = week;
       renderTabs();
       renderPanels();
+      saveLocal();
     });
     tabs.appendChild(btn);
   });
@@ -1209,7 +1224,6 @@ function renderPanels(){
   });
 
   updateShopCount();
-  saveState();
 }
 
 function renderCard(week, idx, meal){
@@ -1233,6 +1247,7 @@ function renderCard(week, idx, meal){
       meal.title = 'New Recipe';
       meal.ingredients = [];
       renderPanels();
+      saveState();
       // focus the new title field after render
       requestAnimationFrame(() => {
         const input = document.querySelector(`[data-week="${week}"] [data-idx="${idx}"] .recipe-title`);
@@ -1283,6 +1298,7 @@ function renderCard(week, idx, meal){
       meal.ingredients = [];
       renderPanels();
       renderTabs();
+      saveState();
     });
     actions.appendChild(removeBtn);
   }
@@ -1338,6 +1354,7 @@ function renderCatGroup(week, idx, meal, cat){
   addChip.addEventListener('click', () => {
     meal.ingredients.push({ name: '', cat });
     renderPanels();
+    saveState();
     requestAnimationFrame(() => {
       const groups = document.querySelectorAll(`[data-idx="${idx}"] .role-group`);
       const thisGroup = Array.from(groups).find(g => g.dataset.cat === cat);
@@ -1383,6 +1400,7 @@ function renderChip(meal, ingIdx, ing){
     meal.ingredients.splice(ingIdx, 1);
     renderPanels();
     refreshShoppingListIfOpen();
+    saveState();
   });
   chip.appendChild(removeBtn);
 
@@ -1609,7 +1627,9 @@ document.getElementById('syncSaveBtn').addEventListener('click', async () => {
   saveSyncConfig({ url, key });
   setSyncStatus('Saved. Syncing…');
   const pulled = await pullFromSync();
-  if(!pulled){
+  if(pulled){
+    saveLocal(); // remember the shared plan locally, but don't push it right back
+  } else {
     // Nothing usable on the sheet yet (or it's brand new) — push what we have.
     saveState();
   }
@@ -1622,6 +1642,7 @@ document.getElementById('syncPullBtn').addEventListener('click', async () => {
   if(!cfg){ setSyncStatus('Save Sync Settings first.'); return; }
   const pulled = await pullFromSync();
   if(pulled){
+    saveLocal(); // remember the shared plan locally, but don't push it right back
     renderTabs();
     renderPanels();
   }
@@ -1635,6 +1656,12 @@ document.getElementById('syncDisableBtn').addEventListener('click', () => {
 
 /* ---------------------------------------------------------
    INIT
+   Order matters: we render local data immediately for a fast
+   first paint, then (if sync is configured) quietly check the
+   shared sheet in the background and swap in its data if it's
+   different. Nothing here ever pushes to sync — only genuine
+   edits do that (see saveState vs saveLocal above) — so a slow
+   pull can never get clobbered by a stale push racing ahead of it.
 --------------------------------------------------------- */
 loadState();         // fall back to this device's last saved copy first
 renderTabs();
@@ -1644,6 +1671,7 @@ updateBackupStatus();
 if(getSyncConfig()){
   pullFromSync().then(pulled => {
     if(pulled){
+      saveLocal(); // remember the shared plan locally; do NOT push it back
       renderTabs();
       renderPanels();
     }
