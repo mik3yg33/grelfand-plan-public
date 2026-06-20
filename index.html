@@ -562,14 +562,14 @@
     position:fixed;
     top:50%; left:50%;
     transform:translate(-50%, -46%) scale(0.97);
-    width:min(440px, 88vw);
-    max-height:80vh;
+    width:min(560px, 92vw);
+    max-height:85vh;
     overflow-y:auto;
     background:var(--flour);
     border:1px solid var(--line);
     border-radius:18px;
     box-shadow:0 24px 50px -12px rgba(38,35,33,0.35);
-    padding:30px 26px 28px;
+    padding:30px 26px 30px;
     opacity:0;
     pointer-events:none;
     transition:opacity .2s ease, transform .2s ease;
@@ -613,26 +613,103 @@
     font-family:'Fraunces', serif;
     font-weight:600;
     font-size:24px;
-    margin:0 0 18px;
+    margin:0 0 22px;
     padding-right:20px;
     line-height:1.15;
   }
 
-  .recipe-modal-placeholder{
+  .recipe-section{
+    margin-bottom:24px;
+  }
+  .recipe-section:last-child{ margin-bottom:0; }
+  .recipe-section-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .recipe-section-head h3{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    font-weight:600;
+    margin:0;
+    color:var(--ink);
+  }
+  .recipe-add-btn{
     border:1px dashed var(--line);
-    border-radius:12px;
-    padding:30px 20px;
-    text-align:center;
+    background:none;
+    border-radius:999px;
+    padding:5px 12px;
+    font-size:12px;
+    font-weight:600;
     color:var(--ink-soft);
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
   }
-  .recipe-modal-placeholder svg{ opacity:.5; margin-bottom:10px; }
-  .recipe-modal-placeholder p{ margin:0; font-size:14.5px; font-weight:600; color:var(--ink); }
-  .recipe-modal-placeholder .recipe-modal-sub{
-    margin-top:6px;
+  .recipe-add-btn:hover{ border-color:var(--paprika); color:var(--paprika); }
+
+  .recipe-lines{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .recipe-line{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+  }
+  .recipe-line .step-number{
+    flex-shrink:0;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--flour-dim);
+    color:var(--ink-soft);
+    font-size:11.5px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:5px;
+  }
+  .recipe-line textarea{
+    flex:1;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 11px;
+    background:#fff;
+    resize:none;
+    overflow:hidden;
+    min-height:38px;
+    line-height:1.4;
+  }
+  .recipe-line textarea:focus{ outline:2px solid var(--butter); border-color:transparent; }
+  .recipe-line .recipe-line-remove{
+    flex-shrink:0;
+    width:26px; height:26px;
+    margin-top:4px;
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .recipe-line .recipe-line-remove:hover{ background:#fbe6de; color:var(--paprika-dim); }
+
+  .recipe-empty-note{
     font-size:12.5px;
-    font-weight:400;
     color:var(--ink-soft);
+    opacity:.75;
+    margin:6px 0 0;
+    font-style:italic;
   }
+  .recipe-empty-note.is-hidden{ display:none; }
 
   .view-recipe-btn{
     border:1px solid var(--line);
@@ -904,10 +981,23 @@
   </button>
   <div class="recipe-modal-tab" id="recipeModalDay"></div>
   <h2 class="recipe-modal-title" id="recipeModalTitle"></h2>
-  <div class="recipe-modal-placeholder">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-    <p>Full recipe coming soon.</p>
-    <p class="recipe-modal-sub">This is a placeholder — step-by-step instructions for this dish aren't written yet.</p>
+
+  <div class="recipe-section">
+    <div class="recipe-section-head">
+      <h3>Ingredients</h3>
+      <button class="recipe-add-btn" id="recipeAddIngredientBtn" type="button">+ Add line</button>
+    </div>
+    <div class="recipe-lines" id="recipeIngredientLines"></div>
+    <p class="recipe-empty-note" id="recipeIngredientEmptyNote">No ingredient lines yet — add one above.</p>
+  </div>
+
+  <div class="recipe-section">
+    <div class="recipe-section-head">
+      <h3>Steps</h3>
+      <button class="recipe-add-btn" id="recipeAddStepBtn" type="button">+ Add step</button>
+    </div>
+    <div class="recipe-lines recipe-steps" id="recipeStepLines"></div>
+    <p class="recipe-empty-note" id="recipeStepEmptyNote">No steps yet — add one above.</p>
   </div>
 </div>
 
@@ -998,9 +1088,24 @@ const VALID_WEEKS = new Set(["Week 1","Week 2","Week 3","Week 4"]);
 // Week names and day names are restricted to fixed whitelists (rather than
 // just "is a string") because both get inserted via innerHTML when rendering
 // tabs and empty-slot cards — an unvalidated string there would be a stored
-// XSS hole. Titles and ingredient names are also required to be strings,
-// but those are only ever rendered via .value/.textContent, never innerHTML,
-// so arbitrary text in them is safe to display (just not executed).
+// XSS hole. Titles, ingredient names, and recipe text are also required to
+// be strings, but those are only ever rendered via .value/.textContent,
+// never innerHTML, so arbitrary text in them is safe to display (just not
+// executed).
+//
+// meal.recipe is OPTIONAL — older saved/synced plans won't have it at all,
+// and that's fine; recipeOf() supplies an empty default when reading. When
+// present, it must be { ingredients: string[], steps: string[] }.
+function isValidRecipe(recipe){
+  if(recipe === undefined) return true; // optional — absence is fine
+  if(typeof recipe !== 'object' || recipe === null) return false;
+  if(!Array.isArray(recipe.ingredients)) return false;
+  if(!Array.isArray(recipe.steps)) return false;
+  if(!recipe.ingredients.every(line => typeof line === 'string')) return false;
+  if(!recipe.steps.every(line => typeof line === 'string')) return false;
+  return true;
+}
+
 function isValidPlanShape(payload){
   if(!payload || typeof payload !== 'object') return false;
   if(!payload.mealData || typeof payload.mealData !== 'object') return false;
@@ -1018,11 +1123,21 @@ function isValidPlanShape(payload){
         if(typeof ing.name !== 'string') return false;
         if(typeof ing.cat !== 'string') return false;
       }
+      if(!isValidRecipe(meal.recipe)) return false;
     }
   }
   if(payload.checkedItems !== undefined && typeof payload.checkedItems !== 'object') return false;
   if(payload.activeWeek !== undefined && typeof payload.activeWeek !== 'string') return false;
   return true;
+}
+
+// Returns a meal's recipe with a safe default shape, so callers never have
+// to check "does this old meal even have a recipe field" themselves.
+function recipeOf(meal){
+  if(meal.recipe && Array.isArray(meal.recipe.ingredients) && Array.isArray(meal.recipe.steps)){
+    return meal.recipe;
+  }
+  return { ingredients: [], steps: [] };
 }
 
 // Writes to this browser's local storage only — never touches the sync
@@ -1392,7 +1507,7 @@ function renderCard(week, idx, meal){
   viewBtn.title = 'View recipe';
   viewBtn.setAttribute('aria-label', `View recipe for ${meal.title}`);
   viewBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
-  viewBtn.addEventListener('click', () => openRecipeModal(meal));
+  viewBtn.addEventListener('click', () => openRecipeModal(meal, week, idx));
   actions.appendChild(viewBtn);
 
   if(!meal.isLeftovers){
@@ -1628,21 +1743,138 @@ function closeDrawer(){
 }
 
 /* ---------------------------------------------------------
-   RECIPE MODAL — static placeholder only. Reads meal.title
-   and meal.day (already part of the synced data model) but
-   writes nothing back, stores nothing new, and is not part
-   of mealData/isValidPlanShape. Purely a client-side view.
+   RECIPE MODAL — editable ingredients + numbered steps.
+   Stored as meal.recipe = { ingredients: string[], steps: string[] },
+   a sibling field to meal.title/meal.ingredients. It flows through
+   the exact same save/sync pipeline as everything else (saveState,
+   isValidPlanShape, applyState) — there is no separate storage path
+   for recipes. Rendered only via .value/.textContent, same as the
+   rest of the app, so arbitrary recipe text can never be interpreted
+   as markup.
 --------------------------------------------------------- */
-function openRecipeModal(meal){
+let activeRecipeMeal = null;
+let activeRecipeWeek = null;
+let activeRecipeIdx = null;
+
+function openRecipeModal(meal, week, idx){
+  activeRecipeMeal = meal;
+  activeRecipeWeek = week;
+  activeRecipeIdx = idx;
+
+  // Make sure the meal actually has a recipe object to edit, in the
+  // exact validated shape, before rendering it.
+  if(!meal.recipe || !Array.isArray(meal.recipe.ingredients) || !Array.isArray(meal.recipe.steps)){
+    meal.recipe = { ingredients: [], steps: [] };
+  }
+
   document.getElementById('recipeModalDay').textContent = meal.day;
   document.getElementById('recipeModalTitle').textContent = meal.title;
+  renderRecipeLines();
   document.getElementById('recipeModal').classList.add('open');
   document.getElementById('recipeModalOverlay').classList.add('open');
 }
+
 function closeRecipeModal(){
+  if(activeRecipeMeal && activeRecipeMeal.recipe){
+    const before = activeRecipeMeal.recipe.ingredients.length + activeRecipeMeal.recipe.steps.length;
+    activeRecipeMeal.recipe.ingredients = activeRecipeMeal.recipe.ingredients.filter(line => line.trim() !== '');
+    activeRecipeMeal.recipe.steps = activeRecipeMeal.recipe.steps.filter(line => line.trim() !== '');
+    // Always save on close — don't rely on every textarea having fired its
+    // own blur first (e.g. closing right after typing, before tabbing away).
+    saveState();
+  }
   document.getElementById('recipeModal').classList.remove('open');
   document.getElementById('recipeModalOverlay').classList.remove('open');
+  activeRecipeMeal = null;
+  activeRecipeWeek = null;
+  activeRecipeIdx = null;
 }
+
+function autoGrowTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight) + 'px';
+}
+
+function renderRecipeLines(){
+  if(!activeRecipeMeal) return;
+  renderRecipeLineGroup('recipeIngredientLines', 'recipeIngredientEmptyNote', activeRecipeMeal.recipe.ingredients, false);
+  renderRecipeLineGroup('recipeStepLines', 'recipeStepEmptyNote', activeRecipeMeal.recipe.steps, true);
+}
+
+function renderRecipeLineGroup(containerId, emptyNoteId, lines, numbered){
+  const container = document.getElementById(containerId);
+  const emptyNote = document.getElementById(emptyNoteId);
+  container.innerHTML = '';
+
+  if(lines.length === 0){
+    emptyNote.classList.remove('is-hidden');
+  } else {
+    emptyNote.classList.add('is-hidden');
+  }
+
+  lines.forEach((text, i) => {
+    const row = document.createElement('div');
+    row.className = 'recipe-line';
+
+    if(numbered){
+      const num = document.createElement('span');
+      num.className = 'step-number';
+      num.textContent = String(i + 1);
+      row.appendChild(num);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.rows = 1;
+    textarea.placeholder = numbered ? 'Describe this step…' : 'e.g. 2 lbs chicken thighs';
+    textarea.addEventListener('input', e => {
+      lines[i] = e.target.value;
+      autoGrowTextarea(e.target);
+    });
+    textarea.addEventListener('blur', () => {
+      saveState();
+    });
+    row.appendChild(textarea);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'recipe-line-remove';
+    removeBtn.type = 'button';
+    removeBtn.setAttribute('aria-label', 'Remove line');
+    removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    removeBtn.addEventListener('click', () => {
+      lines.splice(i, 1);
+      renderRecipeLines();
+      saveState();
+    });
+    row.appendChild(removeBtn);
+
+    container.appendChild(row);
+
+    requestAnimationFrame(() => autoGrowTextarea(textarea));
+  });
+}
+
+document.getElementById('recipeAddIngredientBtn').addEventListener('click', () => {
+  if(!activeRecipeMeal) return;
+  activeRecipeMeal.recipe.ingredients.push('');
+  renderRecipeLines();
+  requestAnimationFrame(() => {
+    const textareas = document.querySelectorAll('#recipeIngredientLines textarea');
+    const last = textareas[textareas.length - 1];
+    if(last) last.focus();
+  });
+});
+
+document.getElementById('recipeAddStepBtn').addEventListener('click', () => {
+  if(!activeRecipeMeal) return;
+  activeRecipeMeal.recipe.steps.push('');
+  renderRecipeLines();
+  requestAnimationFrame(() => {
+    const textareas = document.querySelectorAll('#recipeStepLines textarea');
+    const last = textareas[textareas.length - 1];
+    if(last) last.focus();
+  });
+});
 
 /* ---------------------------------------------------------
    EXPAND ALL / COLLAPSE ALL (active week only)
