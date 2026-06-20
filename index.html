@@ -124,19 +124,7 @@
     white-space:nowrap;
     border-radius:8px 8px 0 0;
   }
-  .week-tab .wk-theme{
-    display:block;
-    font-family:'Space Grotesk', sans-serif;
-    font-size:10.5px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    font-weight:600;
-    color:var(--ink-soft);
-    opacity:.55;
-    margin-top:1px;
-  }
   .week-tab.active{ color:var(--ink); }
-  .week-tab.active .wk-theme{ color:var(--paprika); opacity:1; }
   .week-tab.active::after{
     content:'';
     position:absolute;
@@ -146,6 +134,29 @@
     border-radius:3px 3px 0 0;
   }
   .week-tab:hover{ color:var(--ink); }
+
+  .cards-toolbar{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:10px;
+  }
+  .toggle-all-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    padding:7px 13px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .toggle-all-btn:hover{ background:var(--flour-dim); color:var(--ink); }
+  .toggle-all-btn svg{ transition:transform .2s ease; }
+  .toggle-all-btn.is-all-collapsed svg{ transform:rotate(-90deg); }
 
   /* ---------- MEAL CARDS ---------- */
   .week-panel{ display:none; }
@@ -788,6 +799,13 @@
 
   <nav class="week-tabs" id="weekTabs"></nav>
 
+  <div class="cards-toolbar">
+    <button class="toggle-all-btn" id="toggleAllBtn" type="button">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      <span id="toggleAllLabel">Expand all</span>
+    </button>
+  </div>
+
   <div id="weekPanels"></div>
 </div>
 
@@ -875,13 +893,6 @@
    Empty title => renders as an "empty slot" card with an
    Add Recipe button. Editing is all in-memory (no storage).
 --------------------------------------------------------- */
-
-const weekThemes = {
-  "Week 1": "Italian Comfort",
-  "Week 2": "American Classics",
-  "Week 3": "Global Flavors",
-  "Week 4": "Pantry Cleanout"
-};
 
 const mealData = {
   "Week 1": [
@@ -1219,13 +1230,33 @@ function cardKey(week, idx){
   return week + '::' + idx;
 }
 
+function collapseAllCards(){
+  collapsedCards.clear();
+  Object.keys(mealData).forEach(week => {
+    mealData[week].forEach((meal, idx) => {
+      collapsedCards.add(cardKey(week, idx));
+    });
+  });
+}
+
+// Collapse/expand only the cards in the given week (defaults to activeWeek).
+function collapseWeek(week){
+  mealData[week].forEach((meal, idx) => collapsedCards.add(cardKey(week, idx)));
+}
+function expandWeek(week){
+  mealData[week].forEach((meal, idx) => collapsedCards.delete(cardKey(week, idx)));
+}
+function isWeekFullyCollapsed(week){
+  return mealData[week].every((meal, idx) => collapsedCards.has(cardKey(week, idx)));
+}
+
 function renderTabs(){
   const tabs = document.getElementById('weekTabs');
   tabs.innerHTML = '';
   Object.keys(mealData).forEach(week => {
     const btn = document.createElement('button');
     btn.className = 'week-tab' + (week === activeWeek ? ' active' : '');
-    btn.innerHTML = `${week}<span class="wk-theme">${weekThemes[week] || ''}</span>`;
+    btn.textContent = week;
     btn.addEventListener('click', () => {
       activeWeek = week;
       renderTabs();
@@ -1260,6 +1291,7 @@ function renderPanels(){
   });
 
   updateShopCount();
+  updateToggleAllButton();
 }
 
 function renderCard(week, idx, meal){
@@ -1586,6 +1618,27 @@ function closeRecipeModal(){
   document.getElementById('recipeModalOverlay').classList.remove('open');
 }
 
+/* ---------------------------------------------------------
+   EXPAND ALL / COLLAPSE ALL (active week only)
+--------------------------------------------------------- */
+function updateToggleAllButton(){
+  const btn = document.getElementById('toggleAllBtn');
+  const label = document.getElementById('toggleAllLabel');
+  if(!btn || !label) return;
+  const allCollapsed = isWeekFullyCollapsed(activeWeek);
+  btn.classList.toggle('is-all-collapsed', allCollapsed);
+  label.textContent = allCollapsed ? 'Expand all' : 'Collapse all';
+}
+
+document.getElementById('toggleAllBtn').addEventListener('click', () => {
+  if(isWeekFullyCollapsed(activeWeek)){
+    expandWeek(activeWeek);
+  } else {
+    collapseWeek(activeWeek);
+  }
+  renderPanels();
+});
+
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
 document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
@@ -1714,6 +1767,7 @@ document.getElementById('syncDisableBtn').addEventListener('click', () => {
    pull can never get clobbered by a stale push racing ahead of it.
 --------------------------------------------------------- */
 loadState();         // fall back to this device's last saved copy first
+collapseAllCards();  // start every card collapsed on a fresh page load
 renderTabs();
 renderPanels();
 updateBackupStatus();
