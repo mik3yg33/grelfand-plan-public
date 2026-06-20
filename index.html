@@ -627,6 +627,8 @@
     align-items:center;
     justify-content:space-between;
     margin-bottom:10px;
+    gap:8px;
+    flex-wrap:wrap;
   }
   .recipe-section-head h3{
     font-family:'Fraunces', serif;
@@ -634,6 +636,11 @@
     font-weight:600;
     margin:0;
     color:var(--ink);
+  }
+  .recipe-section-head-actions{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
   }
   .recipe-add-btn{
     border:1px dashed var(--line);
@@ -645,8 +652,15 @@
     color:var(--ink-soft);
     cursor:pointer;
     font-family:'Space Grotesk', sans-serif;
+    white-space:nowrap;
   }
   .recipe-add-btn:hover{ border-color:var(--paprika); color:var(--paprika); }
+  .recipe-add-btn#recipePullFromCardBtn{
+    border-style:solid;
+    border-color:var(--pantry-green);
+    color:var(--pantry-green);
+  }
+  .recipe-add-btn#recipePullFromCardBtn:hover{ background:var(--pantry-green); color:var(--flour); }
 
   .recipe-lines{
     display:flex;
@@ -985,7 +999,10 @@
   <div class="recipe-section">
     <div class="recipe-section-head">
       <h3>Ingredients</h3>
-      <button class="recipe-add-btn" id="recipeAddIngredientBtn" type="button">+ Add line</button>
+      <div class="recipe-section-head-actions">
+        <button class="recipe-add-btn" id="recipePullFromCardBtn" type="button">↓ Pull from card</button>
+        <button class="recipe-add-btn" id="recipeAddIngredientBtn" type="button">+ Add line</button>
+      </div>
     </div>
     <div class="recipe-lines" id="recipeIngredientLines"></div>
     <p class="recipe-empty-note" id="recipeIngredientEmptyNote">No ingredient lines yet — add one above.</p>
@@ -1864,6 +1881,46 @@ document.getElementById('recipeAddIngredientBtn').addEventListener('click', () =
     if(last) last.focus();
   });
 });
+
+// Copies the card's shopping-list ingredient names (the Meat/Produce/Dairy/
+// Other chips) into the recipe's Ingredients list as starting lines. Skips
+// any name already present (case-insensitive), so clicking again after the
+// card gains a new ingredient only adds what's missing, never duplicates.
+document.getElementById('recipePullFromCardBtn').addEventListener('click', () => {
+  if(!activeRecipeMeal) return;
+  const existingLower = new Set(
+    activeRecipeMeal.recipe.ingredients.map(line => line.trim().toLowerCase())
+  );
+  const namesToAdd = activeRecipeMeal.ingredients
+    .map(ing => (ing.name || '').trim())
+    .filter(name => name && !existingLower.has(name.toLowerCase()));
+
+  if(namesToAdd.length === 0){
+    setRecipePullStatus('Already up to date — nothing new on the card.');
+    return;
+  }
+
+  namesToAdd.forEach(name => activeRecipeMeal.recipe.ingredients.push(name));
+  renderRecipeLines();
+  saveState();
+  setRecipePullStatus(`Added ${namesToAdd.length} ingredient${namesToAdd.length === 1 ? '' : 's'} from the card.`);
+});
+
+function setRecipePullStatus(text){
+  const el = document.getElementById('recipeIngredientEmptyNote');
+  if(!el) return;
+  const mealAtCallTime = activeRecipeMeal;
+  el.textContent = text;
+  el.classList.remove('is-hidden');
+  setTimeout(() => {
+    // Only restore the normal empty/hidden state if we're still looking
+    // at the same recipe — avoids stomping on a different card's view if
+    // the person closed this one and opened another within the delay.
+    if(activeRecipeMeal === mealAtCallTime){
+      renderRecipeLines();
+    }
+  }, 1800);
+}
 
 document.getElementById('recipeAddStepBtn').addEventListener('click', () => {
   if(!activeRecipeMeal) return;
