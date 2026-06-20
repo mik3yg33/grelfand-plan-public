@@ -497,6 +497,110 @@
     padding:40px 10px;
   }
 
+  /* ---------- RECIPE MODAL ---------- */
+  .recipe-modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(38,35,33,0.45);
+    backdrop-filter:blur(2px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+    z-index:50;
+  }
+  .recipe-modal-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .recipe-modal{
+    position:fixed;
+    top:50%; left:50%;
+    transform:translate(-50%, -46%) scale(0.97);
+    width:min(440px, 88vw);
+    max-height:80vh;
+    overflow-y:auto;
+    background:var(--flour);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 24px 50px -12px rgba(38,35,33,0.35);
+    padding:30px 26px 28px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:51;
+  }
+  .recipe-modal.open{
+    opacity:1;
+    pointer-events:auto;
+    transform:translate(-50%, -50%) scale(1);
+  }
+
+  .recipe-modal-close{
+    position:absolute;
+    top:16px; right:16px;
+    border:none;
+    background:var(--flour-dim);
+    width:30px; height:30px;
+    border-radius:50%;
+    cursor:pointer;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .recipe-modal-close:hover{ background:var(--line); }
+
+  .recipe-modal-tab{
+    display:inline-block;
+    background:var(--pantry-green);
+    color:var(--flour);
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    padding:5px 12px 4px;
+    border-radius:999px;
+    margin-bottom:12px;
+  }
+
+  .recipe-modal-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:24px;
+    margin:0 0 18px;
+    padding-right:20px;
+    line-height:1.15;
+  }
+
+  .recipe-modal-placeholder{
+    border:1px dashed var(--line);
+    border-radius:12px;
+    padding:30px 20px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+  .recipe-modal-placeholder svg{ opacity:.5; margin-bottom:10px; }
+  .recipe-modal-placeholder p{ margin:0; font-size:14.5px; font-weight:600; color:var(--ink); }
+  .recipe-modal-placeholder .recipe-modal-sub{
+    margin-top:6px;
+    font-size:12.5px;
+    font-weight:400;
+    color:var(--ink-soft);
+  }
+
+  .view-recipe-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    width:30px; height:30px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    transition:background .15s, color .15s, border-color .15s;
+    flex-shrink:0;
+  }
+  .view-recipe-btn:hover{ background:var(--flour-dim); color:var(--pantry-green); border-color:var(--pantry-green); }
+  .view-recipe-btn svg{ width:15px; height:15px; }
+
   /* footer note */
   .foot-note{
     max-width:880px;
@@ -723,6 +827,20 @@
   </div>
 </div>
 
+<div class="recipe-modal-overlay" id="recipeModalOverlay"></div>
+<div class="recipe-modal" id="recipeModal" role="dialog" aria-modal="true" aria-labelledby="recipeModalTitle">
+  <button class="recipe-modal-close" id="recipeModalClose" aria-label="Close recipe">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  </button>
+  <div class="recipe-modal-tab" id="recipeModalDay"></div>
+  <h2 class="recipe-modal-title" id="recipeModalTitle"></h2>
+  <div class="recipe-modal-placeholder">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+    <p>Full recipe coming soon.</p>
+    <p class="recipe-modal-sub">This is a placeholder — step-by-step instructions for this dish aren't written yet.</p>
+  </div>
+</div>
+
 <script>
 /* ---------------------------------------------------------
    DATA MODEL
@@ -741,126 +859,49 @@ const weekThemes = {
 
 const mealData = {
   "Week 1": [
-    {day:"Breakfast", title:"Tropical Green Smoothie", ingredients:[
-      {name:"Spinach", cat:"Produce"},{name:"Tropical Fruit", cat:"Produce"},
-      {name:"Greek Yogurt", cat:"Dairy"},{name:"Ginger", cat:"Produce"}
-    ]},
-    {day:"Lunch", title:"Mediterranean Wrap", ingredients:[
-      {name:"Spinach", cat:"Produce"},{name:"Cherry Tomatoes", cat:"Produce"},
-      {name:"Pita Wrap", cat:"Other"},{name:"Chicken/Eggs", cat:"Meat"},
-      {name:"Hummus", cat:"Other"},{name:"Red Onion", cat:"Produce"},{name:"Parmesan", cat:"Dairy"}
-    ]},
-    {day:"Soup/Stew", title:"Tortilla Soup", ingredients:[
-      {name:"Rotel", cat:"Other"},{name:"Black Beans", cat:"Other"},
-      {name:"Refried Beans", cat:"Other"},{name:"Chicken", cat:"Meat"}
-    ]},
-    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
-      {name:"Asparagus", cat:"Produce"},{name:"Corn", cat:"Produce"},
-      {name:"Whole Chicken", cat:"Meat"},{name:"Beer", cat:"Other"}
-    ]},
-    {day:"Monday", title:"Pasta Primavera", ingredients:[
-      {name:"Asparagus", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
-      {name:"Pasta", cat:"Other"},{name:"Chicken", cat:"Meat"},
-      {name:"Red Onion", cat:"Produce"},{name:"Parmesan", cat:"Dairy"}
-    ]},
-    {day:"Tuesday", title:"Sheet Pan Sausage", ingredients:[
-      {name:"Brussels Sprouts", cat:"Produce"},{name:"Red Onions", cat:"Produce"},
-      {name:"Potatoes", cat:"Produce"},{name:"Sausage", cat:"Meat"},{name:"Bell Peppers", cat:"Produce"}
-    ]},
-    {day:"Wednesday", title:"Lasagna Soup", ingredients:[
-      {name:"Diced & Crushed Tomatoes", cat:"Other"},{name:"Mushrooms", cat:"Produce"},
-      {name:"Lasagna Noodles", cat:"Other"},{name:"Sausage", cat:"Meat"},{name:"Ricotta Cheese", cat:"Dairy"}
-    ]},
+    {day:"Breakfast", title:"Tropical Green Smoothie", ingredients:[{name:"Spinach", cat:"Produce"},{name:"Non-fat Greek Yogurt", cat:"Dairy"},{name:"Frozen Tropical Fruit", cat:"Other"}]},
+    {day:"Lunch", title:"Turkey Hummus Spinach", ingredients:[{name:"Hummus", cat:"Other"},{name:"Deli Turkey", cat:"Dairy"},{name:"Spinach", cat:"Produce"},{name:"Tortilla", cat:"Other"}]},
+    {day:"Saturday", title:"", ingredients:[]},
+    {day:"Sunday", title:"Beer Can Chicken & Corn", ingredients:[{name:"Corn", cat:"Produce"},{name:"Beer", cat:"Other"},{name:"Side Salad", cat:"Produce"},{name:"Whole Chicken", cat:"Meat"},{name:"Olive Oil", cat:"Other"},{name:"Red Wine Vinegar", cat:"Other"}]},
+    {day:"Monday", title:"Chicken Tortilla Soup", ingredients:[{name:"Corn", cat:"Produce"},{name:"Whole Chicken", cat:"Meat"},{name:"Bell Peppers", cat:"Produce"},{name:"Dried Pinto Beans", cat:"Other"},{name:"Ro*tel (Large)", cat:"Other"},{name:"Tortilla Strips", cat:"Other"},{name:"Cheddar", cat:"Dairy"}]},
+    {day:"Tuesday", title:"Steak Fajita Sheet Pan", ingredients:[{name:"Steak", cat:"Meat"},{name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},{name:"Dried Pinto Beans", cat:"Other"},{name:"Rice Packet", cat:"Other"}]},
+    {day:"Wednesday", title:"Quick Beef Curry", ingredients:[{name:"Steak", cat:"Meat"},{name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},{name:"Rice Packet", cat:"Other"}]},
     {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
-    {day:"Friday", title:"Salmon Dinner", ingredients:[
-      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
-    ]}
+    {day:"Friday", title:"Salmon Dinner", ingredients:[{name:"Rice Packet", cat:"Other"},{name:"Salmon", cat:"Meat"},{name:"Frozen Green Beans", cat:"Other"}]},
   ],
   "Week 2": [
-    {day:"Breakfast", title:"Berry Pie Smoothie", ingredients:[
-      {name:"Banana", cat:"Produce"},{name:"Berries", cat:"Produce"},
-      {name:"Greek Yogurt", cat:"Dairy"},{name:"Walnuts", cat:"Other"}
-    ]},
-    {day:"Lunch", title:"Thai Peanut Wrap", ingredients:[
-      {name:"Cabbage Mix", cat:"Produce"},{name:"Cilantro", cat:"Produce"},
-      {name:"Tortillas", cat:"Other"},{name:"Chicken", cat:"Meat"},{name:"Peanut Sauce", cat:"Other"}
-    ]},
-    {day:"Soup/Stew", title:"Italian Tortellini Stew", ingredients:[
-      {name:"Zucchini", cat:"Produce"},{name:"Spinach", cat:"Produce"},{name:"Tortellini", cat:"Other"}
-    ]},
-    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
-      {name:"Zucchini", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
-    ]},
-    {day:"Monday", title:"Chicken Fried Rice", ingredients:[
-      {name:"Cabbage Mix", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
-      {name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
-    ]},
-    {day:"Tuesday", title:"Steak Fajitas", ingredients:[
-      {name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},
-      {name:"Refried Beans", cat:"Other"},{name:"Steak", cat:"Meat"},{name:"Cheddar", cat:"Dairy"}
-    ]},
-    {day:"Wednesday", title:"Philly Cheesesteaks", ingredients:[
-      {name:"Mushrooms", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"},
-      {name:"Hoagie Rolls", cat:"Other"},{name:"Steak", cat:"Meat"},{name:"Cheddar", cat:"Dairy"}
-    ]},
+    {day:"Breakfast", title:"Berry Pie Smoothie", ingredients:[{name:"Non-fat Greek Yogurt", cat:"Dairy"},{name:"Walnut Halves (x10)", cat:"Other"},{name:"Frozen Berries", cat:"Other"},{name:"Spinach", cat:"Produce"}]},
+    {day:"Lunch", title:"Turkey Hummus Spinach Wrap", ingredients:[{name:"Spinach", cat:"Produce"},{name:"Deli Turkey", cat:"Dairy"},{name:"Hummus", cat:"Other"},{name:"Tortilla", cat:"Other"}]},
+    {day:"Saturday", title:"", ingredients:[]},
+    {day:"Sunday", title:"Oven Roasted Chicken + Asparagus", ingredients:[{name:"Whole Chicken", cat:"Meat"},{name:"Asparagus", cat:"Produce"},{name:"Sweet Potatoes", cat:"Produce"}]},
+    {day:"Monday", title:"Pasta Primavera", ingredients:[{name:"Whole Chicken", cat:"Meat"},{name:"Cherry Tomatoes", cat:"Produce"},{name:"Red Onion", cat:"Produce"},{name:"Asparagus", cat:"Produce"},{name:"Whole Mushrooms", cat:"Produce"},{name:"Protein Pasta", cat:"Other"},{name:"Parmesan", cat:"Dairy"},{name:"Low Fat Cream Cheese", cat:"Other"}]},
+    {day:"Tuesday", title:"Grilled Chicken + Veggie Skewers", ingredients:[{name:"Chicken Breast", cat:"Meat"},{name:"Cherry Tomatoes", cat:"Produce"},{name:"Red Onions", cat:"Produce"},{name:"Whole Mushrooms", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"}]},
+    {day:"Wednesday", title:"Chipotle Chicken Bowls", ingredients:[{name:"Chicken Breast", cat:"Meat"},{name:"Rice Cups", cat:"Other"},{name:"Cherry Tomatoes", cat:"Produce"},{name:"Red Onions", cat:"Produce"},{name:"Whole Mushrooms", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"}]},
     {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
-    {day:"Friday", title:"Salmon Dinner", ingredients:[
-      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
-    ]}
+    {day:"Friday", title:"Salmon Dinner", ingredients:[{name:"Rice Packet", cat:"Other"},{name:"Salmon", cat:"Meat"},{name:"Frozen Green Beans", cat:"Other"}]},
   ],
   "Week 3": [
-    {day:"Breakfast", title:"PB Smoothie", ingredients:[
-      {name:"Banana", cat:"Produce"},{name:"Spinach", cat:"Produce"},
-      {name:"Peanut Butter", cat:"Other"},{name:"Greek Yogurt", cat:"Dairy"}
-    ]},
-    {day:"Lunch", title:"Kale & Chickpea Wrap", ingredients:[
-      {name:"Kale", cat:"Produce"},{name:"Craisins", cat:"Other"},
-      {name:"Pita Wrap", cat:"Other"},{name:"Roasted Chickpeas", cat:"Other"},{name:"Olive Oil", cat:"Other"}
-    ]},
-    {day:"Soup/Stew", title:"Chicken Noodle Soup", ingredients:[
-      {name:"Carrots", cat:"Produce"},{name:"Celery", cat:"Produce"},
-      {name:"Egg Noodles", cat:"Other"},{name:"Whole Chicken", cat:"Meat"}
-    ]},
-    {day:"Sunday", title:"Oven Roasted Chicken", ingredients:[
-      {name:"Carrots", cat:"Produce"},{name:"Celery", cat:"Produce"},
-      {name:"Sweet Potatoes", cat:"Produce"},{name:"Whole Chicken", cat:"Meat"},{name:"Onions", cat:"Produce"}
-    ]},
-    {day:"Monday", title:"Chinese Eggplant", ingredients:[
-      {name:"Eggplant", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},
-      {name:"Rice", cat:"Other"},{name:"Whole Chicken", cat:"Meat"},{name:"Oyster Sauce", cat:"Other"}
-    ]},
-    {day:"Tuesday", title:"Naf Naf Bowls", ingredients:[
-      {name:"Eggplant", cat:"Produce"},{name:"Artichokes", cat:"Produce"},
-      {name:"Couscous", cat:"Other"},{name:"Chicken Thigh", cat:"Meat"},
-      {name:"Roasted Carrots", cat:"Produce"},{name:"Bell Peppers", cat:"Produce"}
-    ]},
-    {day:"Wednesday", title:"Quick Curry", ingredients:[
-      {name:"Bell Peppers", cat:"Produce"},{name:"Onions", cat:"Produce"},
-      {name:"Rice", cat:"Other"},{name:"Chicken Thigh", cat:"Meat"},
-      {name:"Coconut Milk", cat:"Other"},{name:"Curry Paste", cat:"Other"}
-    ]},
+    {day:"Breakfast", title:"Strawberry Banana Smoothi", ingredients:[{name:"Non-fat Greek Yogurt", cat:"Dairy"},{name:"Frozen Strawberry Banana", cat:"Other"},{name:"Spinach", cat:"Produce"}]},
+    {day:"Lunch", title:"Turkey Hummus Spinach", ingredients:[{name:"Spinach", cat:"Produce"},{name:"Deli Turkey", cat:"Dairy"},{name:"Hummus", cat:"Other"},{name:"Tortilla", cat:"Other"}]},
+    {day:"Saturday", title:"", ingredients:[]},
+    {day:"Sunday", title:"Rotisserie Chicken + Zucchini Spears", ingredients:[{name:"Whole Chicken", cat:"Meat"},{name:"Zucchinni", cat:"Produce"},{name:"Sweet Potatoes", cat:"Produce"}]},
+    {day:"Monday", title:"Chinese Chicken + Eggplant", ingredients:[{name:"Whole Chicken", cat:"Meat"},{name:"Eggplant", cat:"Produce"},{name:"Mushrooms", cat:"Produce"},{name:"Rice Packet", cat:"Other"},{name:"Oyster Sauce", cat:"Other"}]},
+    {day:"Tuesday", title:"Turkey Sausage + Ratatouille", ingredients:[{name:"Turkey Sausage", cat:"Meat"},{name:"Eggplant", cat:"Produce"},{name:"Zucchini", cat:"Produce"},{name:"Italian Cheese", cat:"Dairy"},{name:"Tomato Sauce", cat:"Other"},{name:"Canned Roasted Red Peppers", cat:"Other"}]},
+    {day:"Wednesday", title:"Eggplant Parm Soup", ingredients:[{name:"Eggplant", cat:"Produce"},{name:"Turkey Sausage", cat:"Meat"},{name:"Mushrooms", cat:"Produce"},{name:"Petite Diced Tomatoes", cat:"Other"},{name:"Crushed Tomatoes", cat:"Other"},{name:"Low Fat Ricotta", cat:"Dairy"}]},
     {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
-    {day:"Friday", title:"Salmon Dinner", ingredients:[
-      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
-    ]}
+    {day:"Friday", title:"Salmon Dinner", ingredients:[{name:"Rice Packet", cat:"Other"},{name:"Salmon", cat:"Meat"},{name:"Frozen Green Beans", cat:"Other"}]},
   ],
   "Week 4": [
     {day:"Breakfast", title:"Pantry Smoothie", ingredients:[]},
     {day:"Lunch", title:"Pantry Egg Salad Wrap", ingredients:[]},
-    {day:"Soup/Stew", title:"Pantry Vegetable Lentil Stew", ingredients:[]},
+    {day:"Saturday", title:"Pantry Vegetable Lentil Stew", ingredients:[]},
     {day:"Sunday", title:"Steak Night", ingredients:[]},
     {day:"Monday", title:"Pantry Pasta Night", ingredients:[]},
-    {day:"Tuesday", title:"Pantry Taco Night", ingredients:[
-      {name:"Ground Turkey", cat:"Meat"}
-    ]},
-    {day:"Wednesday", title:"Pantry Stir Fry Night", ingredients:[
-      {name:"Chicken Thigh", cat:"Meat"}
-    ]},
+    {day:"Tuesday", title:"Pantry Taco Night", ingredients:[{name:"Ground Turkey", cat:"Meat"}]},
+    {day:"Wednesday", title:"Pantry Stir Fry Night", ingredients:[{name:"Chicken Thigh", cat:"Meat"}]},
     {day:"Thursday", title:"LEFTOVERS", ingredients:[], isLeftovers:true},
-    {day:"Friday", title:"Salmon Dinner", ingredients:[
-      {name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}
-    ]}
-  ]
+    {day:"Friday", title:"Salmon Dinner", ingredients:[{name:"Green Beans", cat:"Produce"},{name:"Rice", cat:"Other"},{name:"Salmon", cat:"Meat"}]},
+  ],
 };
 
 // Checked-off state for shopping list, keyed by normalized ingredient name.
@@ -885,7 +926,7 @@ const SYNC_CONFIG_KEY = 'grelfandPlan.syncConfig.v1';
 // Snapshot of the original recipe data, used by "Reset to original plan".
 const defaultMealData = JSON.parse(JSON.stringify(mealData));
 
-const VALID_DAYS = new Set(["Breakfast","Lunch","Soup/Stew","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"]);
+const VALID_DAYS = new Set(["Breakfast","Lunch","Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"]);
 const VALID_WEEKS = new Set(["Week 1","Week 2","Week 3","Week 4"]);
 
 // Strict shape check before we ever trust incoming data (from localStorage,
@@ -932,7 +973,23 @@ function saveState(){
   }
 }
 
+// One-time migration: older saved/exported plans used "Soup/Stew" as a day
+// label, which has since been renamed to "Saturday". Rewrite it in place on
+// anything we're about to load, so old backups/localStorage/sync data don't
+// just silently fail validation and get dropped.
+function migrateLegacyDayNames(payload){
+  if(!payload || !payload.mealData || typeof payload.mealData !== 'object') return payload;
+  Object.values(payload.mealData).forEach(meals => {
+    if(!Array.isArray(meals)) return;
+    meals.forEach(meal => {
+      if(meal && meal.day === 'Soup/Stew') meal.day = 'Saturday';
+    });
+  });
+  return payload;
+}
+
 function applyState(payload){
+  payload = migrateLegacyDayNames(payload);
   if(!isValidPlanShape(payload)) return false;
   Object.keys(mealData).forEach(week => { delete mealData[week]; });
   Object.keys(payload.mealData).forEach(week => { mealData[week] = payload.mealData[week]; });
@@ -1207,6 +1264,14 @@ function renderCard(week, idx, meal){
   const actions = document.createElement('div');
   actions.className = 'card-actions';
 
+  const viewBtn = document.createElement('button');
+  viewBtn.className = 'view-recipe-btn';
+  viewBtn.title = 'View recipe';
+  viewBtn.setAttribute('aria-label', `View recipe for ${meal.title}`);
+  viewBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+  viewBtn.addEventListener('click', () => openRecipeModal(meal));
+  actions.appendChild(viewBtn);
+
   if(!meal.isLeftovers){
     const removeBtn = document.createElement('button');
     removeBtn.className = 'icon-btn remove-btn';
@@ -1436,9 +1501,28 @@ function closeDrawer(){
   document.getElementById('drawerOverlay').classList.remove('open');
 }
 
+/* ---------------------------------------------------------
+   RECIPE MODAL — static placeholder only. Reads meal.title
+   and meal.day (already part of the synced data model) but
+   writes nothing back, stores nothing new, and is not part
+   of mealData/isValidPlanShape. Purely a client-side view.
+--------------------------------------------------------- */
+function openRecipeModal(meal){
+  document.getElementById('recipeModalDay').textContent = meal.day;
+  document.getElementById('recipeModalTitle').textContent = meal.title;
+  document.getElementById('recipeModal').classList.add('open');
+  document.getElementById('recipeModalOverlay').classList.add('open');
+}
+function closeRecipeModal(){
+  document.getElementById('recipeModal').classList.remove('open');
+  document.getElementById('recipeModalOverlay').classList.remove('open');
+}
+
 document.getElementById('openDrawerBtn').addEventListener('click', openDrawer);
 document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
 document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+document.getElementById('recipeModalClose').addEventListener('click', closeRecipeModal);
+document.getElementById('recipeModalOverlay').addEventListener('click', closeRecipeModal);
 
 document.getElementById('checkAllBtn').addEventListener('click', () => {
   const byCategory = buildShoppingList();
@@ -1457,7 +1541,7 @@ document.getElementById('clearChecksBtn').addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape') closeDrawer();
+  if(e.key === 'Escape'){ closeDrawer(); closeRecipeModal(); }
 });
 
 document.getElementById('exportBtn').addEventListener('click', () => {
