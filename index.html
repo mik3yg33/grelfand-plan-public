@@ -1846,16 +1846,30 @@ window.addEventListener('beforeinstallprompt', (event) => {
 });
 
 document.getElementById('installBtn').addEventListener('click', async () => {
-  if(!deferredInstallPrompt) return;
   const btn = document.getElementById('installBtn');
+  if(!deferredInstallPrompt){
+    // The captured event either never arrived or has gone stale (Chrome
+    // can invalidate it after enough time passes on the page). Rather than
+    // do nothing silently, fall back to clear manual instructions.
+    alert('Your browser didn\'t hand back a fresh install prompt. Try reloading this page once, then tap this button again right away — or use Chrome\'s menu (⋮) → "Add to Home screen" instead.');
+    return;
+  }
   btn.disabled = true;
-  deferredInstallPrompt.prompt();
-  const choice = await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  if(choice && choice.outcome === 'accepted'){
-    btn.hidden = true; // it's installed now, no need to keep offering
-  } else {
-    btn.disabled = false; // they dismissed it, let them try again later
+  try{
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    if(choice && choice.outcome === 'accepted'){
+      btn.hidden = true; // it's installed now, no need to keep offering
+    } else {
+      btn.disabled = false; // they dismissed it, let them try again later
+    }
+  }catch(err){
+    // prompt() can throw if the captured event went stale. Surface this
+    // instead of failing silently, and point at the reliable manual path.
+    deferredInstallPrompt = null;
+    btn.disabled = false;
+    alert('The install prompt couldn\'t be shown (' + (err && err.message ? err.message : 'unknown error') + '). Try Chrome\'s menu (⋮) → "Add to Home screen" instead — that always works even when this button can\'t.');
   }
 });
 
