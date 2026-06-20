@@ -242,6 +242,32 @@
   .icon-btn.remove-btn:hover{ background:#fbe6de; color:var(--paprika-dim); border-color:#e9c3b2; }
   .icon-btn svg{ width:15px; height:15px; }
 
+  .collapse-btn svg{
+    transition:transform .2s ease;
+  }
+  .meal-card.is-collapsed .collapse-btn svg{
+    transform:rotate(-90deg);
+  }
+
+  .roles-block, .leftovers-note{
+    overflow:hidden;
+    max-height:1000px;
+    opacity:1;
+    transition:max-height .25s ease, opacity .2s ease, margin .2s ease;
+  }
+  .meal-card.is-collapsed .roles-block,
+  .meal-card.is-collapsed .leftovers-note{
+    max-height:0;
+    opacity:0;
+    margin:0;
+    pointer-events:none;
+  }
+  .leftovers-note{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
   .roles-block{
     display:flex;
     flex-direction:column;
@@ -1183,6 +1209,16 @@ function categorize(cat){
 --------------------------------------------------------- */
 let activeWeek = "Week 1";
 
+// Tracks which cards are collapsed (ingredients hidden, title still shown).
+// Deliberately NOT part of mealData, never saved or synced — this is a
+// pure view preference that resets to "all expanded" on every page load.
+// Keyed as "Week N::cardIndex".
+const collapsedCards = new Set();
+
+function cardKey(week, idx){
+  return week + '::' + idx;
+}
+
 function renderTabs(){
   const tabs = document.getElementById('weekTabs');
   tabs.innerHTML = '';
@@ -1229,7 +1265,8 @@ function renderPanels(){
 function renderCard(week, idx, meal){
   const card = document.createElement('div');
   const isEmpty = !meal.title || meal.title.trim() === '';
-  card.className = 'meal-card' + (isEmpty ? ' is-empty' : '') + (meal.isLeftovers ? ' is-leftovers' : '');
+  const isCollapsed = collapsedCards.has(cardKey(week, idx));
+  card.className = 'meal-card' + (isEmpty ? ' is-empty' : '') + (meal.isLeftovers ? ' is-leftovers' : '') + (isCollapsed ? ' is-collapsed' : '');
 
   const tab = document.createElement('div');
   tab.className = 'card-tab';
@@ -1279,6 +1316,19 @@ function renderCard(week, idx, meal){
   const actions = document.createElement('div');
   actions.className = 'card-actions';
 
+  const collapseBtn = document.createElement('button');
+  collapseBtn.className = 'icon-btn collapse-btn';
+  collapseBtn.title = isCollapsed ? 'Expand ingredients' : 'Collapse ingredients';
+  collapseBtn.setAttribute('aria-label', isCollapsed ? `Expand ${meal.title}` : `Collapse ${meal.title}`);
+  collapseBtn.setAttribute('aria-expanded', String(!isCollapsed));
+  collapseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+  collapseBtn.addEventListener('click', () => {
+    const key = cardKey(week, idx);
+    if(collapsedCards.has(key)){ collapsedCards.delete(key); } else { collapsedCards.add(key); }
+    renderPanels();
+  });
+  actions.appendChild(collapseBtn);
+
   const viewBtn = document.createElement('button');
   viewBtn.className = 'view-recipe-btn';
   viewBtn.title = 'View recipe';
@@ -1319,7 +1369,7 @@ function renderCard(week, idx, meal){
     body.appendChild(rolesBlock);
   } else {
     const note = document.createElement('p');
-    note.style.cssText = 'font-size:13px;color:var(--ink-soft);margin:0;';
+    note.className = 'leftovers-note';
     note.textContent = 'Clear-the-fridge night — eat through whatever\'s left from the week.';
     body.appendChild(note);
   }
