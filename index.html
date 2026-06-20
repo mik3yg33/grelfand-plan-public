@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Grelfand Plan</title>
+
+<!-- Add to Home Screen / standalone app support -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2F3B2E">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- iOS-specific: Safari ignores the manifest's display mode, so it needs its own tag -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Grelfand Plan">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -692,6 +704,16 @@
   }
   .backup-actions button.ghost:hover{ color:var(--paprika); text-decoration-color:var(--paprika); }
 
+  .backup-actions button.install-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--pantry-green);
+    color:var(--flour);
+    border-color:var(--pantry-green);
+  }
+  .backup-actions button.install-btn:hover{ background:var(--pantry-green-dim); color:var(--flour); }
+
   .sync-panel{
     max-width:880px;
     margin:14px auto 0;
@@ -815,6 +837,10 @@
   <span class="backup-status" id="backupStatus"></span>
   <span class="backup-status" id="syncStatus"></span>
   <div class="backup-actions">
+    <button id="installBtn" type="button" class="install-btn" hidden>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
+      Add to phone home screen
+    </button>
     <button id="exportBtn" type="button">Export backup</button>
     <button id="importBtn" type="button">Import backup</button>
     <input type="file" id="importFile" accept="application/json" hidden>
@@ -1781,6 +1807,64 @@ if(getSyncConfig()){
     }
   });
 }
+
+// Registers the no-op service worker (see sw.js) so Chrome on Android
+// treats this page as installable via "Add to Home Screen" and opens it
+// standalone, without the address bar. Harmless no-op if unsupported
+// (e.g. opened as a local file rather than over HTTPS).
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      // Quietly ignore — the app works fine without it, just without
+      // the standalone "Add to Home Screen" treatment.
+    });
+  });
+}
+
+/* ---------------------------------------------------------
+   "ADD TO PHONE HOME SCREEN" BUTTON
+   A real install can only ever be triggered by the browser's
+   own dialog — no webpage can silently create a home-screen
+   icon, since that would be a security hole. What this does
+   is listen for Chrome's beforeinstallprompt event (which
+   fires only when Chrome itself has decided the page meets
+   its installability bar) and, on click, ask Chrome to show
+   its native install prompt early instead of waiting for the
+   person to find it in the browser menu.
+
+   This event doesn't exist in iOS Safari or once the app is
+   already installed, so the button stays hidden by default
+   and only appears if the event actually fires.
+--------------------------------------------------------- */
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault(); // stop the automatic mini-banner; we'll show our own button instead
+  deferredInstallPrompt = event;
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.hidden = false;
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if(!deferredInstallPrompt) return;
+  const btn = document.getElementById('installBtn');
+  btn.disabled = true;
+  deferredInstallPrompt.prompt();
+  const choice = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  if(choice && choice.outcome === 'accepted'){
+    btn.hidden = true; // it's installed now, no need to keep offering
+  } else {
+    btn.disabled = false; // they dismissed it, let them try again later
+  }
+});
+
+// Once installed, Chrome fires this — hide the button for good on this device.
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.hidden = true;
+  deferredInstallPrompt = null;
+});
 
 
 </script>
