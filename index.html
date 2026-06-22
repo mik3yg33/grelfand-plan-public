@@ -741,6 +741,95 @@
   .view-recipe-btn:hover{ background:var(--flour-dim); color:var(--pantry-green); border-color:var(--pantry-green); }
   .view-recipe-btn svg{ width:15px; height:15px; }
 
+  .move-btn:hover{ background:#eef2ea; color:var(--pantry-green); border-color:var(--pantry-green); }
+
+  .move-from-empty-btn{
+    display:block;
+    margin:8px auto 0;
+    border:none;
+    background:none;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    text-decoration-color:var(--line);
+    cursor:pointer;
+  }
+  .move-from-empty-btn:hover{ color:var(--pantry-green); text-decoration-color:var(--pantry-green); }
+
+  /* ---------- MOVE MENU (swap popover) ---------- */
+  .move-menu-overlay{
+    position:fixed; inset:0;
+    background:transparent;
+    display:none;
+    z-index:60;
+  }
+  .move-menu-overlay.open{ display:block; }
+
+  .move-menu{
+    position:fixed;
+    display:none;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:0 14px 34px -10px rgba(38,35,33,0.3);
+    z-index:61;
+    width:240px;
+    max-height:min(360px, 70vh);
+    overflow-y:auto;
+    padding:6px;
+  }
+  .move-menu.open{ display:block; }
+
+  .move-menu-head{
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:700;
+    color:var(--ink-soft);
+    padding:8px 10px 6px;
+  }
+  .move-menu-week-label{
+    font-size:11px;
+    font-weight:700;
+    color:var(--paprika);
+    padding:8px 10px 2px;
+  }
+  .move-menu-item{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+    width:100%;
+    text-align:left;
+    border:none;
+    background:none;
+    border-radius:8px;
+    padding:7px 10px;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px;
+    color:var(--ink);
+  }
+  .move-menu-item:hover{ background:var(--flour-dim); }
+  .move-menu-item .mm-day{
+    font-weight:700;
+    flex-shrink:0;
+    width:62px;
+  }
+  .move-menu-item .mm-title{
+    color:var(--ink-soft);
+    font-size:12px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .move-menu-empty{
+    padding:14px 10px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    text-align:center;
+  }
+
   /* footer note */
   .foot-note{
     max-width:880px;
@@ -986,6 +1075,12 @@
     <button id="clearChecksBtn">Uncheck all</button>
     <button class="primary" id="checkAllBtn">Check all</button>
   </div>
+</div>
+
+<div class="move-menu-overlay" id="moveMenuOverlay"></div>
+<div class="move-menu" id="moveMenu" role="menu" aria-label="Move recipe to a different day">
+  <div class="move-menu-head">Swap with…</div>
+  <div class="move-menu-list" id="moveMenuList"></div>
 </div>
 
 <div class="recipe-modal-overlay" id="recipeModalOverlay"></div>
@@ -1482,6 +1577,17 @@ function renderCard(week, idx, meal){
       });
     });
     body.appendChild(addBtn);
+
+    const moveLink = document.createElement('button');
+    moveLink.className = 'move-from-empty-btn';
+    moveLink.type = 'button';
+    moveLink.textContent = 'or move a recipe here…';
+    moveLink.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMoveMenu(moveLink, week, idx);
+    });
+    body.appendChild(moveLink);
+
     card.appendChild(body);
     card.dataset.idx = idx;
     return card;
@@ -1518,6 +1624,19 @@ function renderCard(week, idx, meal){
     renderPanels();
   });
   actions.appendChild(collapseBtn);
+
+  if(!meal.isLeftovers){
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'icon-btn move-btn';
+    moveBtn.title = 'Move to a different day';
+    moveBtn.setAttribute('aria-label', `Move ${meal.title} to a different day`);
+    moveBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="8 21 3 21 3 16"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>`;
+    moveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMoveMenu(moveBtn, week, idx);
+    });
+    actions.appendChild(moveBtn);
+  }
 
   const viewBtn = document.createElement('button');
   viewBtn.className = 'view-recipe-btn';
@@ -1745,6 +1864,133 @@ function refreshShoppingListIfOpen(){
     renderShoppingDrawer();
   }
 }
+
+/* ---------------------------------------------------------
+   MOVE / SWAP MENU
+   Every day-slot always holds exactly one meal (even empty
+   slots hold a placeholder), so "move" is implemented as a
+   full swap of two slots' contents — title, ingredients,
+   recipe, everything. Thursday/leftovers slots are excluded
+   as both source and target, since "leftovers" is a fixed
+   structural slot in the week, not a recipe to relocate.
+   This is a pure data-model operation on the existing
+   mealData, so it flows through the normal saveState/sync
+   pipeline with no separate code path.
+--------------------------------------------------------- */
+let moveMenuSource = null; // { week, idx }
+
+function openMoveMenu(triggerEl, week, idx){
+  moveMenuSource = { week, idx };
+  const list = document.getElementById('moveMenuList');
+  list.innerHTML = '';
+
+  let anyTargets = false;
+  Object.keys(mealData).forEach(targetWeek => {
+    const mealsInWeek = mealData[targetWeek];
+    const rowsForWeek = [];
+    mealsInWeek.forEach((targetMeal, targetIdx) => {
+      if(targetMeal.isLeftovers) return; // leftovers slot is never a valid target
+      if(targetWeek === week && targetIdx === idx) return; // skip the slot we're moving from
+      rowsForWeek.push({ targetWeek, targetIdx, targetMeal });
+    });
+    if(rowsForWeek.length === 0) return;
+
+    const weekLabel = document.createElement('div');
+    weekLabel.className = 'move-menu-week-label';
+    weekLabel.textContent = targetWeek;
+    list.appendChild(weekLabel);
+
+    rowsForWeek.forEach(({ targetWeek, targetIdx, targetMeal }) => {
+      anyTargets = true;
+      const item = document.createElement('button');
+      item.className = 'move-menu-item';
+      item.type = 'button';
+
+      const dayEl = document.createElement('span');
+      dayEl.className = 'mm-day';
+      dayEl.textContent = targetMeal.day;
+      item.appendChild(dayEl);
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'mm-title';
+      titleEl.textContent = targetMeal.title && targetMeal.title.trim() ? targetMeal.title : '(empty)';
+      item.appendChild(titleEl);
+
+      item.addEventListener('click', () => {
+        swapMeals(moveMenuSource.week, moveMenuSource.idx, targetWeek, targetIdx);
+        closeMoveMenu();
+      });
+      list.appendChild(item);
+    });
+  });
+
+  if(!anyTargets){
+    list.innerHTML = '<div class="move-menu-empty">No other days available to swap with.</div>';
+  }
+
+  positionMoveMenu(triggerEl);
+  document.getElementById('moveMenu').classList.add('open');
+  document.getElementById('moveMenuOverlay').classList.add('open');
+}
+
+function positionMoveMenu(triggerEl){
+  const menu = document.getElementById('moveMenu');
+  const rect = triggerEl.getBoundingClientRect();
+  const menuWidth = 240;
+  let left = rect.left;
+  if(left + menuWidth > window.innerWidth - 10){
+    left = window.innerWidth - menuWidth - 10;
+  }
+  if(left < 10) left = 10;
+  let top = rect.bottom + 6;
+  // If there's not enough room below, open upward instead.
+  const estimatedMenuHeight = 300;
+  if(top + estimatedMenuHeight > window.innerHeight && rect.top > estimatedMenuHeight){
+    top = rect.top - estimatedMenuHeight - 6;
+  }
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+}
+
+function closeMoveMenu(){
+  document.getElementById('moveMenu').classList.remove('open');
+  document.getElementById('moveMenuOverlay').classList.remove('open');
+  moveMenuSource = null;
+}
+
+// Swaps everything about two meal slots EXCEPT their fixed `day` (and
+// `isLeftovers`, which only ever belongs to Thursday and is excluded from
+// being a target anyway). Also moves each slot's collapsed/expanded view
+// state along with it, so a card you'd collapsed doesn't suddenly pop back
+// open just because it moved.
+function swapMeals(weekA, idxA, weekB, idxB){
+  const mealA = mealData[weekA][idxA];
+  const mealB = mealData[weekB][idxB];
+
+  const dayA = mealA.day;
+  const dayB = mealB.day;
+
+  const swappedA = { ...mealB, day: dayA };
+  const swappedB = { ...mealA, day: dayB };
+
+  mealData[weekA][idxA] = swappedA;
+  mealData[weekB][idxB] = swappedB;
+
+  const keyA = cardKey(weekA, idxA);
+  const keyB = cardKey(weekB, idxB);
+  const aWasCollapsed = collapsedCards.has(keyA);
+  const bWasCollapsed = collapsedCards.has(keyB);
+  collapsedCards.delete(keyA);
+  collapsedCards.delete(keyB);
+  if(bWasCollapsed) collapsedCards.add(keyA);
+  if(aWasCollapsed) collapsedCards.add(keyB);
+
+  renderTabs();
+  renderPanels();
+  saveState();
+}
+
+document.getElementById('moveMenuOverlay').addEventListener('click', closeMoveMenu);
 
 /* ---------------------------------------------------------
    DRAWER OPEN / CLOSE
@@ -1977,7 +2223,7 @@ document.getElementById('clearChecksBtn').addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape'){ closeDrawer(); closeRecipeModal(); }
+  if(e.key === 'Escape'){ closeDrawer(); closeRecipeModal(); closeMoveMenu(); }
 });
 
 document.getElementById('exportBtn').addEventListener('click', () => {
